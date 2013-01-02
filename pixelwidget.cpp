@@ -1,5 +1,6 @@
 #include <QtDebug>
 #include <QtGui/QPainter>
+#include <QtGui/QMouseEvent>
 #include "pixelwidget.h"
 
 PixelWidget::PixelWidget(QWidget * parent)
@@ -50,9 +51,23 @@ void PixelWidget::zoomOut()
 	update();
 }
 
+void PixelWidget::mousePressEvent(QMouseEvent * event)
+{
+	if(event->button() == Qt::LeftButton) {
+		QPoint pixelPos = event->pos() / zoomFactor;
+		image.setPixel(pixelPos, color);
+		update();
+	}
+	QWidget::mousePressEvent(event);
+}
+
 void PixelWidget::paintEvent(QPaintEvent*)
 {
 	QPainter painter(this);
 	painter.drawImage(rect(), image);
 }
 
+void PixelWidget::setColor(const QColor & penColor)
+{
+	color = penColor.rgb();
+}

@@ -10,14 +10,19 @@ public:
 
 	virtual QSize sizeHint() const;
 	virtual QSize minimumSizeHint() const;
+
+	QColor currentColor() const { return color; }
 public slots:
 	void load(const QString & fileName);
 	void save(const QString & fileName);
 	void zoomIn();
 	void zoomOut();
+	void setColor(const QColor & penColor);
 protected:
 	virtual void paintEvent(QPaintEvent*);
+	virtual void mousePressEvent(QMouseEvent*);
 private:
 	int zoomFactor;
+	QRgb color;
 	QImage image;
 };

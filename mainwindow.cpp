@@ -1,5 +1,6 @@
 #include <QtGui/QLabel>
 #include <QtGui/QFileDialog>
+#include <QtGui/QColorDialog>
 #include "pixelwidget.h"
 #include "mainwindow.h"
 
@@ -38,4 +39,13 @@ void MainWindow::on_zoomIn_clicked()
 void MainWindow::on_zoomOut_clicked()
 {
 	view->zoomOut();
+}
+
+void MainWindow::on_color_clicked()
+{
+	QColor color = QColorDialog::getColor(view->currentColor(), this);
+	if(color.isValid()) {
+		view->setColor(color);
+		ui.color->setText(color.name());
+	}
 }
