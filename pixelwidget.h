@@ -13,8 +13,11 @@ public:
 public slots:
 	void load(const QString & fileName);
 	void save(const QString & fileName);
+	void zoomIn();
+	void zoomOut();
 protected:
 	virtual void paintEvent(QPaintEvent*);
 private:
+	int zoomFactor;
 	QImage image;
 };

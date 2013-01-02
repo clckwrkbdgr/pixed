@@ -48,6 +48,20 @@
         </property>
        </widget>
       </item>
+      <item>
+       <widget class="QPushButton" name="zoomIn">
+        <property name="text">
+         <string>zoomIn (+)</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="zoomOut">
+        <property name="text">
+         <string>zoomOut (-)</string>
+        </property>
+       </widget>
+      </item>
      </layout>
     </item>
    </layout>

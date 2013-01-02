@@ -2,6 +2,7 @@
 *.swp
 
 # Build
+pixed
 Makefile
 *.o
 tmp/

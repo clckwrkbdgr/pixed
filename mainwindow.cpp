@@ -30,3 +30,12 @@ void MainWindow::on_save_clicked()
 	view->save(fileName);
 }
 
+void MainWindow::on_zoomIn_clicked()
+{
+	view->zoomIn();
+}
+
+void MainWindow::on_zoomOut_clicked()
+{
+	view->zoomOut();
+}

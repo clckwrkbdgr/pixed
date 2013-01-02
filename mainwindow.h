@@ -13,6 +13,8 @@ public:
 private slots:
 	void on_open_clicked();
 	void on_save_clicked();
+	void on_zoomIn_clicked();
+	void on_zoomOut_clicked();
 private:
 	Ui::MainWindow ui;
 	PixelWidget * view;
