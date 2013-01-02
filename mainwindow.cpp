@@ -1,13 +1,15 @@
 #include <QtGui/QLabel>
 #include <QtGui/QFileDialog>
+#include "pixelwidget.h"
 #include "mainwindow.h"
 
 MainWindow::MainWindow(QWidget * parent)
 	: QMainWindow(parent)
 {
 	ui.setupUi(this);
-	view = new QLabel();
+	view = new PixelWidget();
 	ui.scrollArea->setWidget(view);
+	view->show();
 }
 
 void MainWindow::on_open_clicked()
@@ -16,17 +18,15 @@ void MainWindow::on_open_clicked()
 	if(fileName.isEmpty())
 		return;
 
-	QPixmap image(fileName);
-	view->setScaledContents(true);
-	view->setPixmap(image);
+	view->load(fileName);
 }
 
 void MainWindow::on_save_clicked()
 {
-	QString fileName = QFileDialog::getSaveFileName(this, tr("Open image..."));
+	QString fileName = QFileDialog::getSaveFileName(this, tr("Save image..."));
 	if(fileName.isEmpty())
 		return;
 
-	view->pixmap()->save(fileName);
+	view->save(fileName);
 }
 

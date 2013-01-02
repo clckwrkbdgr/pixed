@@ -2,7 +2,7 @@
 #include <QtGui/QMainWindow>
 #include "ui_mainwindow.h"
 
-class QLabel;
+class PixelWidget;
 
 class MainWindow : public QMainWindow {
 	Q_OBJECT
@@ -15,5 +15,5 @@ private slots:
 	void on_save_clicked();
 private:
 	Ui::MainWindow ui;
-	QLabel * view;
+	PixelWidget * view;
 };
