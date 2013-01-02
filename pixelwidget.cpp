@@ -54,7 +54,7 @@ void PixelWidget::zoomOut()
 void PixelWidget::mousePressEvent(QMouseEvent * event)
 {
 	if(event->button() == Qt::LeftButton) {
-		QPoint pixelPos = event->pos() / zoomFactor;
+		QPoint pixelPos = QPoint(event->pos().x() / zoomFactor, event->pos().y() / zoomFactor);
 		image.setPixel(pixelPos, color);
 		update();
 	}
