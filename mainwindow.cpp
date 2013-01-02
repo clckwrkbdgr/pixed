@@ -14,7 +14,7 @@ MainWindow::MainWindow(QWidget * parent)
 
 void MainWindow::on_open_clicked()
 {
-	QString fileName = QFileDialog::getOpenFileName(this, tr("Open image..."));
+	QString fileName = QFileDialog::getOpenFileName(this, tr("Open image..."), QString(), tr("PNG Images (*.png)"));
 	if(fileName.isEmpty())
 		return;
 
@@ -23,7 +23,7 @@ void MainWindow::on_open_clicked()
 
 void MainWindow::on_save_clicked()
 {
-	QString fileName = QFileDialog::getSaveFileName(this, tr("Save image..."));
+	QString fileName = QFileDialog::getSaveFileName(this, tr("Save image..."), QString(), tr("PNG Images (*.png)"));
 	if(fileName.isEmpty())
 		return;
 
