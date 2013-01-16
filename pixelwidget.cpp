@@ -7,7 +7,7 @@
 const int MIN_ZOOM_FACTOR = 2;
 
 PixelWidget::PixelWidget(const QString & imageFileName, QWidget * parent)
-	: QWidget(parent), zoomFactor(4), fileName(imageFileName)
+	: QWidget(parent), explicitCursor(false), zoomFactor(4), fileName(imageFileName)
 {
 	if(QFile::exists(fileName)) {
 		canvas.load(fileName);
@@ -32,6 +32,7 @@ void PixelWidget::keyPressEvent(QKeyEvent * event)
 		case Qt::Key_Left: shift = QPoint(-1, 0); break;
 		case Qt::Key_Right: shift = QPoint(1, 0); break;
 
+		case Qt::Key_P: explicitCursor = !explicitCursor; update(); break;
 		case Qt::Key_Q: close(); break;
 		case Qt::Key_Plus: zoomIn(); break;
 		case Qt::Key_Minus: zoomOut(); break;
@@ -41,6 +42,8 @@ void PixelWidget::keyPressEvent(QKeyEvent * event)
 	if(!shift.isNull()) {
 		if(event->modifiers().testFlag(Qt::ShiftModifier)) {
 			shiftCanvas(shift);
+		} else {
+			shiftCursor(shift);
 		}
 	}
 }
@@ -48,6 +51,16 @@ void PixelWidget::keyPressEvent(QKeyEvent * event)
 void PixelWidget::shiftCanvas(const QPoint & shift)
 {
 	canvasShift += shift;
+	update();
+}
+
+void PixelWidget::shiftCursor(const QPoint & shift)
+{
+	QPoint newCursor = cursor + shift;
+	if(newCursor.x() < 0 || newCursor.x() >= canvas.width() || newCursor.y() < 0 || newCursor.y() >= canvas.height()) {
+		return;
+	}
+	cursor = newCursor;
 	update();
 }
 
@@ -76,6 +89,7 @@ void PixelWidget::paintEvent(QPaintEvent*)
 {
 	QPoint leftTop = rect().center() - (canvas.rect().center() - canvasShift) * zoomFactor;
 	QRect imageRect = QRect(leftTop, canvas.size() * zoomFactor);
+	QRect cursorRect = QRect(leftTop + cursor * zoomFactor, QSize(zoomFactor, zoomFactor));
 
 	QPainter painter(this);
 	painter.fillRect(rect(), Qt::black);
@@ -83,5 +97,13 @@ void PixelWidget::paintEvent(QPaintEvent*)
 	painter.setBrush(Qt::NoBrush);
 	painter.drawRect(imageRect.adjusted(-1, -1, 0, 0));
 	painter.drawImage(imageRect, canvas);
+	if(explicitCursor) {
+		painter.drawLine(cursorRect.left(), 0, cursorRect.left(), height());
+		painter.drawLine(cursorRect.right(), 0, cursorRect.right(), height());
+		painter.drawLine(0, cursorRect.top(), width(), cursorRect.top());
+		painter.drawLine(0, cursorRect.bottom(), width(), cursorRect.bottom());
+	} else {
+		painter.drawRect(cursorRect);
+	}
 }
 

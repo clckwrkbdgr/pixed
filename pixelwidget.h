@@ -11,8 +11,10 @@ protected:
 	virtual void paintEvent(QPaintEvent*);
 	virtual void keyPressEvent(QKeyEvent*);
 private:
+	bool explicitCursor;
 	int zoomFactor;
 	QPoint canvasShift;
+	QPoint cursor;
 	QString fileName;
 	QImage canvas;
 
@@ -20,4 +22,5 @@ private:
 	void zoomOut();
 	void shiftCanvas(const QPoint & shift);
 	void centerCanvas();
+	void shiftCursor(const QPoint & shift);
 };
