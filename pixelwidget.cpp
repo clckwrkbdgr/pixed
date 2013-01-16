@@ -1,73 +1,35 @@
 #include <QtDebug>
+#include <QtCore/QFile>
 #include <QtGui/QPainter>
 #include <QtGui/QMouseEvent>
 #include "pixelwidget.h"
 
-PixelWidget::PixelWidget(QWidget * parent)
-	: QWidget(parent), zoomFactor(1)
+PixelWidget::PixelWidget(const QString & imageFileName, QWidget * parent)
+	: QWidget(parent), fileName(imageFileName)
 {
-	setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-}
-
-QSize PixelWidget::sizeHint() const
-{
-	return image.size() * zoomFactor;
-}
-
-QSize PixelWidget::minimumSizeHint() const
-{
-	return sizeHint();
-}
-
-void PixelWidget::load(const QString & fileName)
-{
-	image.load(fileName);
-	resize(sizeHint());
-	updateGeometry();
-	update();
-}
-
-void PixelWidget::save(const QString & fileName)
-{
-	image.save(fileName);
-}
-
-void PixelWidget::zoomIn()
-{
-	++zoomFactor;
-	resize(sizeHint());
-	updateGeometry();
-	update();
-}
-
-void PixelWidget::zoomOut()
-{
-	--zoomFactor;
-	if(zoomFactor < 1) {
-		zoomFactor = 1;
+	if(QFile::exists(fileName)) {
+		canvas.load(fileName);
+	} else {
+		canvas = QImage(QSize(32, 32), QImage::Format_RGB32);
+		canvas.fill(qRgb(255, 255, 255));
 	}
-	resize(sizeHint());
-	updateGeometry();
 	update();
 }
 
-void PixelWidget::mousePressEvent(QMouseEvent * event)
+PixelWidget::~PixelWidget()
 {
-	if(event->button() == Qt::LeftButton) {
-		QPoint pixelPos = QPoint(event->pos().x() / zoomFactor, event->pos().y() / zoomFactor);
-		image.setPixel(pixelPos, color);
-		update();
-	}
-	QWidget::mousePressEvent(event);
+	canvas.save(fileName);
 }
 
 void PixelWidget::paintEvent(QPaintEvent*)
 {
+	QRect imageRect = QRect(rect().center() - canvas.rect().center() * 4, canvas.size() * 4);
+
 	QPainter painter(this);
-	painter.drawImage(rect(), image);
+	painter.fillRect(rect(), Qt::black);
+	painter.setPen(Qt::red);
+	painter.setBrush(Qt::NoBrush);
+	painter.drawRect(imageRect.adjusted(-1, -1, 0, 0));
+	painter.drawImage(imageRect, canvas);
 }
 
-void PixelWidget::setColor(const QColor & penColor)
-{
-	color = penColor.rgb();
-}

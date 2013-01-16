@@ -2,6 +2,5 @@ OBJECTS_DIR = tmp
 MOC_DIR = tmp
 UI_DIR = tmp
 
-FORMS = mainwindow.ui
-HEADERS = mainwindow.h pixelwidget.h
-SOURCES = main.cpp mainwindow.cpp pixelwidget.cpp
+HEADERS = pixelwidget.h
+SOURCES = main.cpp pixelwidget.cpp
