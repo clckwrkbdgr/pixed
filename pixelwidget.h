@@ -12,9 +12,12 @@ protected:
 	virtual void keyPressEvent(QKeyEvent*);
 private:
 	int zoomFactor;
+	QPoint canvasShift;
 	QString fileName;
 	QImage canvas;
 
 	void zoomIn();
 	void zoomOut();
+	void shiftCanvas(const QPoint & shift);
+	void centerCanvas();
 };
