@@ -18,6 +18,8 @@ private:
 	uint color;
 	QString fileName;
 	QImage canvas;
+	bool colorInputMode;
+	QString colorEntered;
 
 	QColor indexToRealColor(uint index);
 	uint indexAtPos(const QPoint & pos);
@@ -29,4 +31,6 @@ private:
 	void putColorAtCursor();
 	void takeColorUnderCursor();
 	void toggleExplicitCursor();
+	void startColorInput();
+	void endColorInput();
 };

@@ -17,7 +17,7 @@ QString toString(const QList<int> & list)
 }
 
 PixelWidget::PixelWidget(const QString & imageFileName, QWidget * parent)
-	: QWidget(parent), explicitCursor(false), zoomFactor(4), color(0), fileName(imageFileName)
+	: QWidget(parent), explicitCursor(false), zoomFactor(4), color(0), fileName(imageFileName), colorInputMode(false)
 {
 	if(QFile::exists(fileName)) {
 		canvas.load(fileName);
@@ -51,6 +51,16 @@ PixelWidget::~PixelWidget()
 
 void PixelWidget::keyPressEvent(QKeyEvent * event)
 {
+	if(colorInputMode) {
+		switch(event->key()) {
+			case Qt::Key_Backspace: if(colorEntered.size() > 1) colorEntered.remove(colorEntered.size() - 1); break;
+			case Qt::Key_Return: case Qt::Key_Enter: endColorInput(); break;
+			case Qt::Key_Escape: colorEntered = ""; endColorInput(); break;
+			default: colorEntered += event->text();
+		}
+		update();
+	}
+
 	QPoint shift;
 	switch(event->key()) {
 		case Qt::Key_Up: shift = QPoint(0, -1); break;
@@ -58,6 +68,7 @@ void PixelWidget::keyPressEvent(QKeyEvent * event)
 		case Qt::Key_Left: shift = QPoint(-1, 0); break;
 		case Qt::Key_Right: shift = QPoint(1, 0); break;
 
+		case Qt::Key_NumberSign: startColorInput(); break;
 		case Qt::Key_Period: takeColorUnderCursor(); break;
 		case Qt::Key_Space: putColorAtCursor(); break;
 		case Qt::Key_P: toggleExplicitCursor(); break;
@@ -74,6 +85,28 @@ void PixelWidget::keyPressEvent(QKeyEvent * event)
 			shiftCursor(shift);
 		}
 	}
+}
+
+void PixelWidget::startColorInput()
+{
+	colorInputMode = true;
+	colorEntered = "#";
+	update();
+}
+
+void PixelWidget::endColorInput()
+{
+	colorInputMode = false;
+	bool hasPalette = (canvas.colorCount() > 0);
+	QColor value = QColor(colorEntered);
+	if(value.isValid()) {
+		if(hasPalette) {
+			canvas.setColor(color, value.rgb());
+		} else {
+			color = value.rgb();
+		}
+	}
+	update();
 }
 
 void PixelWidget::putColorAtCursor()
@@ -172,22 +205,21 @@ void PixelWidget::paintEvent(QPaintEvent*)
 	} else {
 		painter.drawRect(cursorRect);
 	}
+	QPoint currentColorAreaShift;
 	if(hasPalette) {
 		for(int i = 0; i < canvas.colorCount(); ++i) {
 			painter.fillRect(QRect(0, 32 * i, 32, 32), canvas.color(i));
 		}
 		painter.drawRect(0, 0, 32, 32 * canvas.colorCount());
 
-		QPoint shift = QPoint(32, color * 32);
-		painter.setBrush(indexToRealColor(color));
-		painter.drawRect(currentColorRect.translated(shift));
-		painter.setBrush(indexToRealColor(indexAtPos(cursor)));
-		painter.drawRect(colorUnderCursorRect.translated(shift));
-	} else {
-		painter.setBrush(indexToRealColor(color));
-		painter.drawRect(currentColorRect);
-		painter.setBrush(indexToRealColor(indexAtPos(cursor)));
-		painter.drawRect(colorUnderCursorRect);
+		currentColorAreaShift = QPoint(32, color * 32);
+	}
+	painter.setBrush(indexToRealColor(color));
+	painter.drawRect(currentColorRect.translated(currentColorAreaShift));
+	painter.setBrush(indexToRealColor(indexAtPos(cursor)));
+	painter.drawRect(colorUnderCursorRect.translated(currentColorAreaShift));
+	if(colorInputMode) {
+		painter.drawText(currentColorAreaShift + QPoint(32, 32), colorEntered);
 	}
 }
 
