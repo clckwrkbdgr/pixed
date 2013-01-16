@@ -105,5 +105,8 @@ void PixelWidget::paintEvent(QPaintEvent*)
 	} else {
 		painter.drawRect(cursorRect);
 	}
+
+	QRect colorUnderCursorRect = QRect(width() - 32, 0, 32, 32);
+	painter.fillRect(colorUnderCursorRect, canvas.pixel(cursor));
 }
 
