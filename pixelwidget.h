@@ -9,7 +9,12 @@ public:
 	virtual ~PixelWidget();
 protected:
 	virtual void paintEvent(QPaintEvent*);
+	virtual void keyPressEvent(QKeyEvent*);
 private:
+	int zoomFactor;
 	QString fileName;
 	QImage canvas;
+
+	void zoomIn();
+	void zoomOut();
 };
