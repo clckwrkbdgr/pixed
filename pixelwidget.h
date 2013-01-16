@@ -33,4 +33,6 @@ private:
 	void toggleExplicitCursor();
 	void startColorInput();
 	void endColorInput();
+	void pickNextColor();
+	void pickPrevColor();
 };

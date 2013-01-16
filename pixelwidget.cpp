@@ -68,6 +68,8 @@ void PixelWidget::keyPressEvent(QKeyEvent * event)
 		case Qt::Key_Left: shift = QPoint(-1, 0); break;
 		case Qt::Key_Right: shift = QPoint(1, 0); break;
 
+		case Qt::Key_PageUp: pickPrevColor(); break;
+		case Qt::Key_PageDown: pickNextColor(); break;
 		case Qt::Key_NumberSign: startColorInput(); break;
 		case Qt::Key_Period: takeColorUnderCursor(); break;
 		case Qt::Key_Space: putColorAtCursor(); break;
@@ -85,6 +87,30 @@ void PixelWidget::keyPressEvent(QKeyEvent * event)
 			shiftCursor(shift);
 		}
 	}
+}
+
+void PixelWidget::pickNextColor()
+{
+	bool hasPalette = (canvas.colorCount() > 0);
+	if(!hasPalette)
+		return;
+	int newColor = color + 1;
+	if(newColor >= canvas.colorCount())
+		return;
+	color = newColor;
+	update();
+}
+
+void PixelWidget::pickPrevColor()
+{
+	bool hasPalette = (canvas.colorCount() > 0);
+	if(!hasPalette)
+		return;
+	int newColor = color - 1;
+	if(newColor < 0)
+		return;
+	color = newColor;
+	update();
 }
 
 void PixelWidget::startColorInput()
