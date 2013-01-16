@@ -7,13 +7,13 @@
 const int MIN_ZOOM_FACTOR = 2;
 
 PixelWidget::PixelWidget(const QString & imageFileName, QWidget * parent)
-	: QWidget(parent), explicitCursor(false), zoomFactor(4), fileName(imageFileName)
+	: QWidget(parent), explicitCursor(false), zoomFactor(4), color(0), fileName(imageFileName)
 {
 	if(QFile::exists(fileName)) {
 		canvas.load(fileName);
 	} else {
 		canvas = QImage(QSize(32, 32), QImage::Format_RGB32);
-		canvas.fill(qRgb(255, 255, 255));
+		canvas.fill(0);
 	}
 	update();
 }
@@ -32,7 +32,9 @@ void PixelWidget::keyPressEvent(QKeyEvent * event)
 		case Qt::Key_Left: shift = QPoint(-1, 0); break;
 		case Qt::Key_Right: shift = QPoint(1, 0); break;
 
-		case Qt::Key_P: explicitCursor = !explicitCursor; update(); break;
+		case Qt::Key_Period: takeColorUnderCursor(); break;
+		case Qt::Key_Space: putColorAtCursor(); break;
+		case Qt::Key_P: toggleExplicitCursor(); break;
 		case Qt::Key_Q: close(); break;
 		case Qt::Key_Plus: zoomIn(); break;
 		case Qt::Key_Minus: zoomOut(); break;
@@ -46,6 +48,24 @@ void PixelWidget::keyPressEvent(QKeyEvent * event)
 			shiftCursor(shift);
 		}
 	}
+}
+
+void PixelWidget::putColorAtCursor()
+{
+	canvas.setPixel(cursor, color);
+	update();
+}
+
+void PixelWidget::takeColorUnderCursor()
+{
+	color = indexAtPos(cursor);
+	update();
+}
+
+void PixelWidget::toggleExplicitCursor()
+{
+	explicitCursor = !explicitCursor;
+	update();
 }
 
 void PixelWidget::shiftCanvas(const QPoint & shift)
@@ -85,11 +105,31 @@ void PixelWidget::zoomOut()
 	update();
 }
 
+uint PixelWidget::indexAtPos(const QPoint & pos)
+{
+	switch(canvas.depth()) {
+		case 1: case 8: return canvas.pixelIndex(pos);
+		case 32: return canvas.pixel(pos);
+	}
+	return 0;
+}
+
+QColor PixelWidget::indexToRealColor(uint index)
+{
+	switch(canvas.depth()) {
+		case 1: case 8: return canvas.color(index);
+		case 32: return QColor(index);
+	}
+	return QColor();
+}
+
 void PixelWidget::paintEvent(QPaintEvent*)
 {
 	QPoint leftTop = rect().center() - (canvas.rect().center() - canvasShift) * zoomFactor;
 	QRect imageRect = QRect(leftTop, canvas.size() * zoomFactor);
 	QRect cursorRect = QRect(leftTop + cursor * zoomFactor, QSize(zoomFactor, zoomFactor));
+	QRect currentColorRect = QRect(0, 0, 32, 32);
+	QRect colorUnderCursorRect = QRect(0, 0, 8, 8).translated(24, 24);
 
 	QPainter painter(this);
 	painter.fillRect(rect(), Qt::black);
@@ -105,8 +145,9 @@ void PixelWidget::paintEvent(QPaintEvent*)
 	} else {
 		painter.drawRect(cursorRect);
 	}
-
-	QRect colorUnderCursorRect = QRect(width() - 32, 0, 32, 32);
-	painter.fillRect(colorUnderCursorRect, canvas.pixel(cursor));
+	painter.setBrush(indexToRealColor(color));
+	painter.drawRect(currentColorRect);
+	painter.setBrush(indexToRealColor(indexAtPos(cursor)));
+	painter.drawRect(colorUnderCursorRect);
 }
 

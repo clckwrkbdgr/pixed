@@ -15,12 +15,18 @@ private:
 	int zoomFactor;
 	QPoint canvasShift;
 	QPoint cursor;
+	uint color;
 	QString fileName;
 	QImage canvas;
 
+	QColor indexToRealColor(uint index);
+	uint indexAtPos(const QPoint & pos);
 	void zoomIn();
 	void zoomOut();
 	void shiftCanvas(const QPoint & shift);
 	void centerCanvas();
 	void shiftCursor(const QPoint & shift);
+	void putColorAtCursor();
+	void takeColorUnderCursor();
+	void toggleExplicitCursor();
 };
