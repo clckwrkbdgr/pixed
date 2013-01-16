@@ -1,16 +1,42 @@
 #include <QtDebug>
 #include <QtCore/QFile>
+#include <QtCore/QTextStream>
 #include <QtGui/QPainter>
 #include <QtGui/QKeyEvent>
 #include "pixelwidget.h"
 
 const int MIN_ZOOM_FACTOR = 2;
 
+QString toString(const QList<int> & list)
+{
+	QString result = list.isEmpty() ? "None" : QString::number(list.first());
+	foreach(const int value, list) {
+		result += QString(", %1").arg(value);
+	}
+	return result;
+}
+
 PixelWidget::PixelWidget(const QString & imageFileName, QWidget * parent)
 	: QWidget(parent), explicitCursor(false), zoomFactor(4), color(0), fileName(imageFileName)
 {
 	if(QFile::exists(fileName)) {
 		canvas.load(fileName);
+
+		QList<int> supportedDepths = QList<int>() << 1 << 8 << 32;
+		if(!supportedDepths.contains(canvas.depth())) {
+			QTextStream out(stdout);
+			out << "Unsupported pixel depth: " << canvas.depth();
+			out << "Supported depths limited to: " << toString(supportedDepths);
+			exit(1);
+		}
+
+		QList<int> supportedColorCounts = QList<int>() << 1 << 16 << 256 << 0;
+		if(!supportedColorCounts.contains(canvas.colorCount())) {
+			QTextStream out(stdout);
+			out << "Unsupported color count: " << canvas.colorCount();
+			out << "Supported counts limited to: " << toString(supportedColorCounts);
+			exit(1);
+		}
 	} else {
 		canvas = QImage(QSize(32, 32), QImage::Format_RGB32);
 		canvas.fill(0);
@@ -130,6 +156,7 @@ void PixelWidget::paintEvent(QPaintEvent*)
 	QRect cursorRect = QRect(leftTop + cursor * zoomFactor, QSize(zoomFactor, zoomFactor));
 	QRect currentColorRect = QRect(0, 0, 32, 32);
 	QRect colorUnderCursorRect = QRect(0, 0, 8, 8).translated(24, 24);
+	bool hasPalette = (canvas.colorCount() > 0);
 
 	QPainter painter(this);
 	painter.fillRect(rect(), Qt::black);
@@ -145,9 +172,22 @@ void PixelWidget::paintEvent(QPaintEvent*)
 	} else {
 		painter.drawRect(cursorRect);
 	}
-	painter.setBrush(indexToRealColor(color));
-	painter.drawRect(currentColorRect);
-	painter.setBrush(indexToRealColor(indexAtPos(cursor)));
-	painter.drawRect(colorUnderCursorRect);
+	if(hasPalette) {
+		for(int i = 0; i < canvas.colorCount(); ++i) {
+			painter.fillRect(QRect(0, 32 * i, 32, 32), canvas.color(i));
+		}
+		painter.drawRect(0, 0, 32, 32 * canvas.colorCount());
+
+		QPoint shift = QPoint(32, color * 32);
+		painter.setBrush(indexToRealColor(color));
+		painter.drawRect(currentColorRect.translated(shift));
+		painter.setBrush(indexToRealColor(indexAtPos(cursor)));
+		painter.drawRect(colorUnderCursorRect.translated(shift));
+	} else {
+		painter.setBrush(indexToRealColor(color));
+		painter.drawRect(currentColorRect);
+		painter.setBrush(indexToRealColor(indexAtPos(cursor)));
+		painter.drawRect(colorUnderCursorRect);
+	}
 }
 
