@@ -23,6 +23,7 @@ private:
 
 	QColor indexToRealColor(uint index);
 	uint indexAtPos(const QPoint & pos);
+	void floodFill();
 	void zoomIn();
 	void zoomOut();
 	void shiftCanvas(const QPoint & shift);

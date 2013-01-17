@@ -72,8 +72,9 @@ void PixelWidget::keyPressEvent(QKeyEvent * event)
 		case Qt::Key_PageDown: pickNextColor(); break;
 		case Qt::Key_NumberSign: startColorInput(); break;
 		case Qt::Key_Period: takeColorUnderCursor(); break;
-		case Qt::Key_Space: putColorAtCursor(); break;
-		case Qt::Key_P: toggleExplicitCursor(); break;
+		case Qt::Key_I: case Qt::Key_Space: putColorAtCursor(); break;
+		case Qt::Key_P: floodFill(); break;
+		case Qt::Key_V: toggleExplicitCursor(); break;
 		case Qt::Key_Q: close(); break;
 		case Qt::Key_Plus: zoomIn(); break;
 		case Qt::Key_Minus: zoomOut(); break;
@@ -87,6 +88,36 @@ void PixelWidget::keyPressEvent(QKeyEvent * event)
 			shiftCursor(shift);
 		}
 	}
+}
+
+uint indexAtPos(const QImage & image, const QPoint & pos)
+{
+	switch(image.depth()) {
+		case 1: case 8: return image.pixelIndex(pos);
+		case 32: return image.pixel(pos);
+	}
+	return 0;
+}
+
+void runFloodFill(QImage * image, const QPoint & pos, uint colorToPaintOver, uint colorWhichIsNeeded)
+{
+	if(image == NULL)
+		return;
+	if(!image->valid(pos))
+		return;
+	if(indexAtPos(*image, pos) != colorToPaintOver)
+		return;
+	image->setPixel(pos, colorWhichIsNeeded);
+	runFloodFill(image, pos + QPoint( 1, 0), colorToPaintOver, colorWhichIsNeeded);
+	runFloodFill(image, pos + QPoint(-1, 0), colorToPaintOver, colorWhichIsNeeded);
+	runFloodFill(image, pos + QPoint(0,  1), colorToPaintOver, colorWhichIsNeeded);
+	runFloodFill(image, pos + QPoint(0, -1), colorToPaintOver, colorWhichIsNeeded);
+}
+
+void PixelWidget::floodFill()
+{
+	runFloodFill(&canvas, cursor, indexAtPos(cursor), color);
+	update();
 }
 
 void PixelWidget::pickNextColor()

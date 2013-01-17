@@ -25,9 +25,10 @@ Q - quit (and save).
 Arrow keys - move cursor.
 Shift + Arrow keys - shift image in view area.
 Home - center image back.
-P - toggle on/off extended cursor.
+V - toggle on/off extended cursor.
 +/- - zoom in/out. Minimal zoom is 2.
-Space - put current color at current position.
+I or Space - put current color at current position.
+P - floodfill area under cursor with current color.
 . - pick color at current position as current color.
 PgUp/PgDown - scroll through palette colors.
 # - start color input mode (see below).
