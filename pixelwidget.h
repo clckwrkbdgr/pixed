@@ -11,15 +11,18 @@ protected:
 	virtual void paintEvent(QPaintEvent*);
 	virtual void keyPressEvent(QKeyEvent*);
 private:
+	enum RepaintReason { WHOLE_IMAGE_CHANGED = 0, INTERFACE_CHANGED, PIXEL_CHANGED, CURSOR_MOVED };
+
 	bool explicitCursor;
 	int zoomFactor;
 	QPoint canvasShift;
-	QPoint cursor;
+	QPoint cursor, oldCursor;
 	uint color;
 	QString fileName;
 	QImage canvas;
 	bool colorInputMode;
 	QString colorEntered;
+	RepaintReason repaintReason;
 
 	QColor indexToRealColor(uint index);
 	uint indexAtPos(const QPoint & pos);
