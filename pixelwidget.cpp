@@ -17,7 +17,7 @@ QString toString(const QList<int> & list)
 }
 
 PixelWidget::PixelWidget(const QString & imageFileName, QWidget * parent)
-	: QWidget(parent), explicitCursor(false), zoomFactor(4), color(0), fileName(imageFileName), colorInputMode(false), repaintReason(WHOLE_IMAGE_CHANGED)
+	: QWidget(parent), zoomFactor(4), color(0), fileName(imageFileName), colorInputMode(false), wholeScreenChanged(true)
 {
 	setAttribute(Qt::WA_NoSystemBackground, true);
 	if(QFile::exists(fileName)) {
@@ -59,7 +59,7 @@ void PixelWidget::keyPressEvent(QKeyEvent * event)
 			case Qt::Key_Escape: colorEntered = ""; endColorInput(); break;
 			default: colorEntered += event->text();
 		}
-		repaintReason = INTERFACE_CHANGED;
+		wholeScreenChanged = false;
 		update();
 	}
 
@@ -76,7 +76,6 @@ void PixelWidget::keyPressEvent(QKeyEvent * event)
 		case Qt::Key_Period: takeColorUnderCursor(); break;
 		case Qt::Key_I: case Qt::Key_Space: putColorAtCursor(); break;
 		case Qt::Key_P: floodFill(); break;
-		case Qt::Key_V: toggleExplicitCursor(); break;
 		case Qt::Key_Q: close(); break;
 		case Qt::Key_Plus: zoomIn(); break;
 		case Qt::Key_Minus: zoomOut(); break;
@@ -131,7 +130,7 @@ void PixelWidget::pickNextColor()
 	if(newColor >= canvas.colorCount())
 		return;
 	color = newColor;
-	repaintReason = INTERFACE_CHANGED;
+	wholeScreenChanged = false;
 	update();
 }
 
@@ -144,7 +143,7 @@ void PixelWidget::pickPrevColor()
 	if(newColor < 0)
 		return;
 	color = newColor;
-	repaintReason = INTERFACE_CHANGED;
+	wholeScreenChanged = false;
 	update();
 }
 
@@ -152,7 +151,7 @@ void PixelWidget::startColorInput()
 {
 	colorInputMode = true;
 	colorEntered = "#";
-	repaintReason = INTERFACE_CHANGED;
+	wholeScreenChanged = false;
 	update();
 }
 
@@ -168,27 +167,21 @@ void PixelWidget::endColorInput()
 			color = value.rgb();
 		}
 	}
-	repaintReason = INTERFACE_CHANGED;
+	wholeScreenChanged = false;
 	update();
 }
 
 void PixelWidget::putColorAtCursor()
 {
 	canvas.setPixel(cursor, color);
-	repaintReason = PIXEL_CHANGED;
+	wholeScreenChanged = false;
 	update();
 }
 
 void PixelWidget::takeColorUnderCursor()
 {
 	color = indexAtPos(cursor);
-	repaintReason = INTERFACE_CHANGED;
-	update();
-}
-
-void PixelWidget::toggleExplicitCursor()
-{
-	explicitCursor = !explicitCursor;
+	wholeScreenChanged = false;
 	update();
 }
 
@@ -206,7 +199,7 @@ void PixelWidget::shiftCursor(const QPoint & shift)
 	}
 	oldCursor = cursor;
 	cursor = newCursor;
-	repaintReason = CURSOR_MOVED;
+	wholeScreenChanged = false;
 	update();
 }
 
@@ -261,93 +254,32 @@ void PixelWidget::paintEvent(QPaintEvent*)
 	QPainter painter(this);
 	painter.setPen(Qt::red);
 	painter.setBrush(Qt::NoBrush);
-	if(repaintReason == WHOLE_IMAGE_CHANGED) {
+
+	if(wholeScreenChanged) {
 		painter.fillRect(rect(), Qt::black);
 		painter.drawRect(imageRect.adjusted(-1, -1, 0, 0));
 		painter.drawImage(imageRect, canvas);
-		if(explicitCursor) {
-			painter.drawLine(cursorRect.left(), 0, cursorRect.left(), height());
-			painter.drawLine(cursorRect.right(), 0, cursorRect.right(), height());
-			painter.drawLine(0, cursorRect.top(), width(), cursorRect.top());
-			painter.drawLine(0, cursorRect.bottom(), width(), cursorRect.bottom());
-		} else {
-			painter.drawRect(cursorRect);
-		}
-		QPoint currentColorAreaShift;
-		if(hasPalette) {
-			for(int i = 0; i < canvas.colorCount(); ++i) {
-				painter.fillRect(QRect(0, 32 * i, 32, 32), canvas.color(i));
-			}
-			painter.drawRect(0, 0, 32, 32 * canvas.colorCount());
-			currentColorAreaShift = QPoint(32, color * 32);
-		}
-		painter.setBrush(indexToRealColor(color));
-		painter.drawRect(currentColorRect.translated(currentColorAreaShift));
-		painter.setBrush(indexToRealColor(indexAtPos(cursor)));
-		painter.drawRect(colorUnderCursorRect.translated(currentColorAreaShift));
-		if(colorInputMode) {
-			painter.drawText(currentColorAreaShift + QPoint(32, 32), colorEntered);
-		}
 	} else {
 		painter.fillRect(QRect(0, 0, zoomFactor, zoomFactor).translated(imageRect.topLeft() + cursor * zoomFactor), canvas.pixel(cursor));
-		if(explicitCursor) {
-			painter.fillRect(rect(), Qt::black);
-			painter.drawRect(imageRect.adjusted(-1, -1, 0, 0));
-			painter.drawImage(imageRect, canvas);
-			painter.drawLine(cursorRect.left(), 0, cursorRect.left(), height());
-			painter.drawLine(cursorRect.right(), 0, cursorRect.right(), height());
-			painter.drawLine(0, cursorRect.top(), width(), cursorRect.top());
-			painter.drawLine(0, cursorRect.bottom(), width(), cursorRect.bottom());
-		} else {
-			painter.fillRect(QRect(0, 0, zoomFactor, zoomFactor).translated(imageRect.topLeft() + oldCursor * zoomFactor), canvas.pixel(oldCursor));
-			painter.drawRect(cursorRect);
-		}
-		QPoint currentColorAreaShift;
-		if(hasPalette) {
-			for(int i = 0; i < canvas.colorCount(); ++i) {
-				painter.fillRect(QRect(0, 32 * i, 32, 32), canvas.color(i));
-			}
-			painter.drawRect(0, 0, 32, 32 * canvas.colorCount());
-			currentColorAreaShift = QPoint(32, color * 32);
-		}
-		painter.setBrush(indexToRealColor(color));
-		painter.drawRect(currentColorRect.translated(currentColorAreaShift));
-		painter.setBrush(indexToRealColor(indexAtPos(cursor)));
-		painter.drawRect(colorUnderCursorRect.translated(currentColorAreaShift));
-		if(colorInputMode) {
-			painter.drawText(currentColorAreaShift + QPoint(32, 32), colorEntered);
-		}
-	/*} else if(repaintReason == PIXEL_CHANGED) {
-		painter.fillRect(QRect(0, 0, zoomFactor, zoomFactor).translated(imageRect.topLeft() + cursor * zoomFactor), canvas.pixel(cursor));
-		if(explicitCursor) {
-			painter.fillRect(rect(), Qt::black);
-			painter.drawRect(imageRect.adjusted(-1, -1, 0, 0));
-			painter.drawImage(imageRect, canvas);
-			painter.drawLine(cursorRect.left(), 0, cursorRect.left(), height());
-			painter.drawLine(cursorRect.right(), 0, cursorRect.right(), height());
-			painter.drawLine(0, cursorRect.top(), width(), cursorRect.top());
-			painter.drawLine(0, cursorRect.bottom(), width(), cursorRect.bottom());
-		} else {
-			painter.fillRect(QRect(0, 0, zoomFactor, zoomFactor).translated(imageRect.topLeft() + oldCursor * zoomFactor), canvas.pixel(oldCursor));
-			painter.drawRect(cursorRect);
-		}
-		QPoint currentColorAreaShift;
-		if(hasPalette) {
-			for(int i = 0; i < canvas.colorCount(); ++i) {
-				painter.fillRect(QRect(0, 32 * i, 32, 32), canvas.color(i));
-			}
-			painter.drawRect(0, 0, 32, 32 * canvas.colorCount());
-			currentColorAreaShift = QPoint(32, color * 32);
-		}
-		painter.setBrush(indexToRealColor(color));
-		painter.drawRect(currentColorRect.translated(currentColorAreaShift));
-		painter.setBrush(indexToRealColor(indexAtPos(cursor)));
-		painter.drawRect(colorUnderCursorRect.translated(currentColorAreaShift));
-		if(colorInputMode) {
-			painter.drawText(currentColorAreaShift + QPoint(32, 32), colorEntered);
-		}
-		*/
+		painter.fillRect(QRect(0, 0, zoomFactor, zoomFactor).translated(imageRect.topLeft() + oldCursor * zoomFactor), canvas.pixel(oldCursor));
 	}
-	repaintReason = WHOLE_IMAGE_CHANGED;
+	wholeScreenChanged = true;
+
+	painter.drawRect(cursorRect);
+	QPoint currentColorAreaShift;
+	if(hasPalette) {
+		for(int i = 0; i < canvas.colorCount(); ++i) {
+			painter.fillRect(QRect(0, 32 * i, 32, 32), canvas.color(i));
+		}
+		painter.drawRect(0, 0, 32, 32 * canvas.colorCount());
+		currentColorAreaShift = QPoint(32, color * 32);
+	}
+	painter.setBrush(indexToRealColor(color));
+	painter.drawRect(currentColorRect.translated(currentColorAreaShift));
+	painter.setBrush(indexToRealColor(indexAtPos(cursor)));
+	painter.drawRect(colorUnderCursorRect.translated(currentColorAreaShift));
+	if(colorInputMode) {
+		painter.drawText(currentColorAreaShift + QPoint(32, 32), colorEntered);
+	}
 }
 

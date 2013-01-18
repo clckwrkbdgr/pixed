@@ -11,9 +11,6 @@ protected:
 	virtual void paintEvent(QPaintEvent*);
 	virtual void keyPressEvent(QKeyEvent*);
 private:
-	enum RepaintReason { WHOLE_IMAGE_CHANGED = 0, INTERFACE_CHANGED, PIXEL_CHANGED, CURSOR_MOVED };
-
-	bool explicitCursor;
 	int zoomFactor;
 	QPoint canvasShift;
 	QPoint cursor, oldCursor;
@@ -22,7 +19,7 @@ private:
 	QImage canvas;
 	bool colorInputMode;
 	QString colorEntered;
-	RepaintReason repaintReason;
+	bool wholeScreenChanged;
 
 	QColor indexToRealColor(uint index);
 	uint indexAtPos(const QPoint & pos);
@@ -34,7 +31,6 @@ private:
 	void shiftCursor(const QPoint & shift);
 	void putColorAtCursor();
 	void takeColorUnderCursor();
-	void toggleExplicitCursor();
 	void startColorInput();
 	void endColorInput();
 	void pickNextColor();
