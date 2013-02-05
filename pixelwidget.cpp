@@ -246,7 +246,17 @@ void drawCursor(QPainter * painter, const QRect & rect)
 {
 	painter->setCompositionMode(QPainter::RasterOp_SourceXorDestination);
 	painter->setPen(Qt::white);
-	painter->drawRect(rect);
+
+	QPoint width = QPoint(rect.width(), 0);
+	QPoint height = QPoint(0, rect.height());
+	QVector<QPoint> lines;
+	lines << rect.topLeft() - width << rect.topRight() + width;
+	lines << rect.bottomLeft() - width << rect.bottomRight() + width;
+	lines << rect.topLeft() - height << rect.bottomLeft() + height;
+	lines << rect.topRight() - height << rect.bottomRight() + height;
+	painter->drawLines(lines);
+	//painter->drawRect(rect);
+
 	painter->setCompositionMode(QPainter::CompositionMode_SourceOver);
 }
 
@@ -254,8 +264,8 @@ void PixelWidget::paintEvent(QPaintEvent*)
 {
 	QPoint leftTop = rect().center() - (canvas.rect().center() - canvasShift) * zoomFactor;
 	QRect imageRect = QRect(leftTop, canvas.size() * zoomFactor);
-	QRect cursorRect = QRect(leftTop + cursor * zoomFactor, QSize(zoomFactor - 1, zoomFactor - 1));
-	QRect oldCursorRect = QRect(leftTop + oldCursor * zoomFactor, QSize(zoomFactor - 1, zoomFactor - 1));
+	QRect cursorRect = QRect(leftTop + cursor * zoomFactor, QSize(zoomFactor, zoomFactor));
+	QRect oldCursorRect = QRect(leftTop + oldCursor * zoomFactor, QSize(zoomFactor, zoomFactor));
 	QRect currentColorRect = QRect(0, 0, 32, 32);
 	QRect colorUnderCursorRect = QRect(0, 0, 8, 8).translated(24, 24);
 	bool hasPalette = (canvas.colorCount() > 0);
