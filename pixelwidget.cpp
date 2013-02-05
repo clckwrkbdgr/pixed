@@ -242,17 +242,25 @@ QColor PixelWidget::indexToRealColor(uint index)
 	return QColor();
 }
 
+void drawCursor(QPainter * painter, const QRect & rect)
+{
+	painter->setCompositionMode(QPainter::RasterOp_SourceXorDestination);
+	painter->setPen(Qt::white);
+	painter->drawRect(rect);
+	painter->setCompositionMode(QPainter::CompositionMode_SourceOver);
+}
+
 void PixelWidget::paintEvent(QPaintEvent*)
 {
 	QPoint leftTop = rect().center() - (canvas.rect().center() - canvasShift) * zoomFactor;
 	QRect imageRect = QRect(leftTop, canvas.size() * zoomFactor);
 	QRect cursorRect = QRect(leftTop + cursor * zoomFactor, QSize(zoomFactor - 1, zoomFactor - 1));
+	QRect oldCursorRect = QRect(leftTop + oldCursor * zoomFactor, QSize(zoomFactor - 1, zoomFactor - 1));
 	QRect currentColorRect = QRect(0, 0, 32, 32);
 	QRect colorUnderCursorRect = QRect(0, 0, 8, 8).translated(24, 24);
 	bool hasPalette = (canvas.colorCount() > 0);
 
 	QPainter painter(this);
-	painter.setPen(Qt::red);
 	painter.setBrush(Qt::NoBrush);
 
 	if(wholeScreenChanged) {
@@ -260,12 +268,12 @@ void PixelWidget::paintEvent(QPaintEvent*)
 		painter.drawRect(imageRect.adjusted(-1, -1, 0, 0));
 		painter.drawImage(imageRect, canvas);
 	} else {
-		painter.fillRect(QRect(0, 0, zoomFactor, zoomFactor).translated(imageRect.topLeft() + cursor * zoomFactor), canvas.pixel(cursor));
-		painter.fillRect(QRect(0, 0, zoomFactor, zoomFactor).translated(imageRect.topLeft() + oldCursor * zoomFactor), canvas.pixel(oldCursor));
+		drawCursor(&painter, oldCursorRect);
 	}
 	wholeScreenChanged = true;
 
-	painter.drawRect(cursorRect);
+	drawCursor(&painter, cursorRect);
+
 	QPoint currentColorAreaShift;
 	if(hasPalette) {
 		for(int i = 0; i < canvas.colorCount(); ++i) {
