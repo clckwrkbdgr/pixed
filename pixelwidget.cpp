@@ -65,10 +65,14 @@ void PixelWidget::keyPressEvent(QKeyEvent * event)
 
 	QPoint shift;
 	switch(event->key()) {
-		case Qt::Key_Up: shift = QPoint(0, -1); break;
-		case Qt::Key_Down: shift = QPoint(0, 1); break;
-		case Qt::Key_Left: shift = QPoint(-1, 0); break;
-		case Qt::Key_Right: shift = QPoint(1, 0); break;
+		case Qt::Key_K: case Qt::Key_Up: shift = QPoint(0, -1); break;
+		case Qt::Key_J: case Qt::Key_Down: shift = QPoint(0, 1); break;
+		case Qt::Key_H: case Qt::Key_Left: shift = QPoint(-1, 0); break;
+		case Qt::Key_L: case Qt::Key_Right: shift = QPoint(1, 0); break;
+		case Qt::Key_Y: shift = QPoint(-1, -1); break;
+		case Qt::Key_U: shift = QPoint(1, -1); break;
+		case Qt::Key_B: shift = QPoint(-1, 1); break;
+		case Qt::Key_N: shift = QPoint(1, 1); break;
 
 		case Qt::Key_PageUp: pickPrevColor(); break;
 		case Qt::Key_PageDown: pickNextColor(); break;
@@ -77,7 +81,7 @@ void PixelWidget::keyPressEvent(QKeyEvent * event)
 		case Qt::Key_I: case Qt::Key_Space: putColorAtCursor(); break;
 		case Qt::Key_P: floodFill(); break;
 		case Qt::Key_Q: close(); break;
-		case Qt::Key_Plus: zoomIn(); break;
+		case Qt::Key_Equal: case Qt::Key_Plus: zoomIn(); break;
 		case Qt::Key_Minus: zoomOut(); break;
 		case Qt::Key_Home: centerCanvas(); break;
 		default: QWidget::keyPressEvent(event);
