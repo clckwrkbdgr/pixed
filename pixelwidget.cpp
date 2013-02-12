@@ -86,6 +86,7 @@ void PixelWidget::keyPressEvent(QKeyEvent * event)
 		case Qt::Key_Home: centerCanvas(); break;
 		default: QWidget::keyPressEvent(event);
 	}
+	oldCursor = cursor;
 	if(!shift.isNull()) {
 		if(event->modifiers().testFlag(Qt::ShiftModifier)) {
 			shiftCanvas(shift);
@@ -286,6 +287,7 @@ void PixelWidget::paintEvent(QPaintEvent*)
 	}
 	wholeScreenChanged = true;
 
+	painter.fillRect(cursorRect, indexToRealColor(indexAtPos(cursor)));
 	drawCursor(&painter, cursorRect);
 
 	QPoint currentColorAreaShift;
