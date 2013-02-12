@@ -9,11 +9,14 @@ const int MIN_ZOOM_FACTOR = 2;
 
 QString toString(const QList<int> & list)
 {
-	QString result = list.isEmpty() ? "None" : QString::number(list.first());
+	QStringList result;
 	foreach(const int value, list) {
-		result += QString(", %1").arg(value);
+		result << QString::number(value);
 	}
-	return result;
+	if(result.isEmpty()) {
+		return "None";
+	}
+	return result.join(", ");
 }
 
 PixelWidget::PixelWidget(const QString & imageFileName, QWidget * parent)
@@ -26,17 +29,15 @@ PixelWidget::PixelWidget(const QString & imageFileName, QWidget * parent)
 		QList<int> supportedDepths = QList<int>() << 1 << 8 << 32;
 		if(!supportedDepths.contains(canvas.depth())) {
 			QTextStream out(stdout);
-			out << "Unsupported pixel depth: " << canvas.depth();
-			out << "Supported depths limited to: " << toString(supportedDepths);
+			out << "Unsupported pixel depth: " << canvas.depth() << endl;
+			out << "Supported depths limited to: " << toString(supportedDepths) << endl;
 			exit(1);
 		}
 
-		QList<int> supportedColorCounts = QList<int>() << 1 << 16 << 256 << 0;
-		if(!supportedColorCounts.contains(canvas.colorCount())) {
-			QTextStream out(stdout);
-			out << "Unsupported color count: " << canvas.colorCount();
-			out << "Supported counts limited to: " << toString(supportedColorCounts);
-			exit(1);
+		if(canvas.colorCount() > 1 && canvas.colorCount() < 16) {
+			canvas.setColorCount(16);
+		} else if(canvas.colorCount() > 16 && canvas.colorCount() < 256) {
+			canvas.setColorCount(256);
 		}
 	} else {
 		canvas = QImage(QSize(32, 32), QImage::Format_RGB32);
