@@ -297,7 +297,7 @@ void PixelWidget::paintEvent(QPaintEvent*)
 			painter.fillRect(QRect(0, 32 * i, 32, 32), canvas.color(i));
 		}
 		painter.drawRect(0, 0, 32, 32 * canvas.colorCount());
-		currentColorAreaShift = QPoint(32, color * 32);
+		currentColorAreaShift = QPoint(0, color * 32);
 	}
 	painter.setBrush(indexToRealColor(color));
 	painter.drawRect(currentColorRect.translated(currentColorAreaShift));
