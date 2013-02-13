@@ -82,6 +82,7 @@ void PixelWidget::keyPressEvent(QKeyEvent * event)
 		case Qt::Key_I: case Qt::Key_Space: putColorAtCursor(); break;
 		case Qt::Key_P: floodFill(); break;
 		case Qt::Key_Q: close(); break;
+		case Qt::Key_S: if(event->modifiers().testFlag(Qt::ShiftModifier)) { canvas.save(fileName); }; break;
 		case Qt::Key_Equal: case Qt::Key_Plus: zoomIn(); break;
 		case Qt::Key_Minus: zoomOut(); break;
 		case Qt::Key_Home: centerCanvas(); break;
