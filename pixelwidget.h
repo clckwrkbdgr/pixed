@@ -20,7 +20,9 @@ private:
 	bool colorInputMode;
 	QString colorEntered;
 	bool wholeScreenChanged;
+	bool do_draw_grid;
 
+	void switch_draw_grid();
 	QColor indexToRealColor(uint index);
 	uint indexAtPos(const QPoint & pos);
 	void floodFill();

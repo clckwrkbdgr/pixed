@@ -20,7 +20,7 @@ QString toString(const QList<int> & list)
 }
 
 PixelWidget::PixelWidget(const QString & imageFileName, QWidget * parent)
-	: QWidget(parent), zoomFactor(4), color(0), fileName(imageFileName), colorInputMode(false), wholeScreenChanged(true)
+	: QWidget(parent), zoomFactor(4), color(0), fileName(imageFileName), colorInputMode(false), wholeScreenChanged(true), do_draw_grid(false)
 {
 	setAttribute(Qt::WA_NoSystemBackground, true);
 	if(QFile::exists(fileName)) {
@@ -79,10 +79,11 @@ void PixelWidget::keyPressEvent(QKeyEvent * event)
 		case Qt::Key_PageDown: pickNextColor(); break;
 		case Qt::Key_NumberSign: startColorInput(); break;
 		case Qt::Key_Period: takeColorUnderCursor(); break;
-		case Qt::Key_I: case Qt::Key_Space: putColorAtCursor(); break;
+		case Qt::Key_D: case Qt::Key_I: case Qt::Key_Space: putColorAtCursor(); break;
 		case Qt::Key_P: floodFill(); break;
 		case Qt::Key_Q: close(); break;
 		case Qt::Key_S: if(event->modifiers().testFlag(Qt::ShiftModifier)) { canvas.save(fileName); }; break;
+		case Qt::Key_G: if(event->modifiers().testFlag(Qt::ControlModifier)) { switch_draw_grid(); }; break;
 		case Qt::Key_Equal: case Qt::Key_Plus: zoomIn(); break;
 		case Qt::Key_Minus: zoomOut(); break;
 		case Qt::Key_Home: centerCanvas(); break;
@@ -96,6 +97,13 @@ void PixelWidget::keyPressEvent(QKeyEvent * event)
 			shiftCursor(shift);
 		}
 	}
+}
+
+void PixelWidget::switch_draw_grid()
+{
+	do_draw_grid = !do_draw_grid;
+	wholeScreenChanged = true;
+	update();
 }
 
 uint indexAtPos(const QImage & image, const QPoint & pos)
@@ -262,9 +270,35 @@ void drawCursor(QPainter * painter, const QRect & rect)
 	lines << rect.topLeft() - height << rect.bottomLeft() + height;
 	lines << rect.topRight() - height << rect.bottomRight() + height;
 	painter->drawLines(lines);
-	//painter->drawRect(rect);
 
 	painter->setCompositionMode(QPainter::CompositionMode_SourceOver);
+}
+
+void drawGrid(QPainter * painter, const QSize & imageSize, const QPoint & topLeft, int zoomFactor)
+{
+	QVector<QPoint> white_lines, black_lines;
+	for(int x = 1; x < imageSize.width(); ++x) {
+		white_lines << topLeft + QPoint(x * zoomFactor, 0);
+		white_lines << topLeft + QPoint(x * zoomFactor, imageSize.height() * zoomFactor);
+		black_lines << topLeft + QPoint(0, 1) + QPoint(x * zoomFactor, 0);
+		black_lines << topLeft + QPoint(0, 1) + QPoint(x * zoomFactor, imageSize.height() * zoomFactor);
+	}
+	for(int y = 1; y < imageSize.height(); ++y) {
+		white_lines << topLeft + QPoint(0, y * zoomFactor);
+		white_lines << topLeft + QPoint(imageSize.width() * zoomFactor, y * zoomFactor);
+		black_lines << topLeft + QPoint(1, 0) + QPoint(0, y * zoomFactor);
+		black_lines << topLeft + QPoint(1, 0) + QPoint(imageSize.width() * zoomFactor, y * zoomFactor);
+	}
+
+	QPen pen(Qt::DotLine);
+
+	pen.setColor(Qt::white);
+	painter->setPen(pen);
+	painter->drawLines(white_lines);
+
+	pen.setColor(Qt::black);
+	painter->setPen(pen);
+	painter->drawLines(black_lines);
 }
 
 void PixelWidget::paintEvent(QPaintEvent*)
@@ -284,10 +318,15 @@ void PixelWidget::paintEvent(QPaintEvent*)
 		painter.fillRect(rect(), Qt::black);
 		painter.drawRect(imageRect.adjusted(-1, -1, 0, 0));
 		painter.drawImage(imageRect, canvas);
+
 	} else {
 		drawCursor(&painter, oldCursorRect);
 	}
 	wholeScreenChanged = true;
+
+	if(do_draw_grid) {
+		drawGrid(&painter, canvas.size(), imageRect.topLeft(), zoomFactor);
+	}
 
 	painter.fillRect(cursorRect, indexToRealColor(indexAtPos(cursor)));
 	drawCursor(&painter, cursorRect);
