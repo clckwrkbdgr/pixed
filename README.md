@@ -21,17 +21,17 @@ At the corner of the current color view there is a small rectangle which display
 
 Controls
 --------
-Q - quit (and save).
-Shift+S - save.
-Arrow keys or 'hjklyubn' (vim keys) - move cursor.
-Shift + Arrow keys - shift image in view area.
-Home - center image back.
-+/- - zoom in/out. Minimal (and default) zoom is 2.
-I or Space - put current color at current position.
-P - floodfill area under cursor with current color.
-. - pick color at current position as current color.
-PgUp/PgDown - scroll through palette colors.
-# - start color input mode (see below).
+**Q** - quit (and save).  
+**Shift+S** - save.  
+**Arrow keys or 'hjklyubn' (vim keys)** - move cursor.  
+**Shift + Arrow keys** - shift image in view area.  
+**Home** - center image back.  
+**+/-** - zoom in/out. Minimal (and default) zoom is 2.  
+**I or Space** - put current color at current position.  
+**P** - floodfill area under cursor with current color.  
+**.** - pick color at current position as current color.  
+**PgUp/PgDown** - scroll through palette colors.  
+**\#** - start color input mode (see below).  
 
 Color input mode
 ----------------
