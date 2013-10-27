@@ -19,11 +19,11 @@ QString toString(const QList<int> & list)
 	return result.join(", ");
 }
 
-PixelWidget::PixelWidget(const QString & imageFileName, QWidget * parent)
+PixelWidget::PixelWidget(const QString & imageFileName, const QSize & newSize, QWidget * parent)
 	: QWidget(parent), zoomFactor(4), color(0), fileName(imageFileName), colorInputMode(false), wholeScreenChanged(true), do_draw_grid(false)
 {
 	setAttribute(Qt::WA_NoSystemBackground, true);
-	if(QFile::exists(fileName)) {
+	if(QFile::exists(fileName) && newSize.isNull()) {
 		canvas.load(fileName);
 
 		QList<int> supportedDepths = QList<int>() << 1 << 8 << 32;
@@ -40,7 +40,7 @@ PixelWidget::PixelWidget(const QString & imageFileName, QWidget * parent)
 			canvas.setColorCount(256);
 		}
 	} else {
-		canvas = QImage(QSize(32, 32), QImage::Format_RGB32);
+		canvas = QImage(newSize, QImage::Format_RGB32);
 		canvas.fill(0);
 	}
 	update();

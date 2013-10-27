@@ -1,13 +1,62 @@
+#include "pixelwidget.h"
+#include "qgetopt.h"
 #include <QtGui/QApplication>
 #include <QtCore/QTextStream>
-#include "pixelwidget.h"
 
-int printUsage()
+struct Options {
+	int width, height;
+	bool hasSize;
+	QString filename;
+	Options() : width(0), height(0), hasSize(false) {}
+	bool parse();
+	bool printUsage();
+};
+
+bool Options::printUsage()
 {
+	static const QString usage = QObject::tr(
+			"Simple pixel graphic editor.\n"
+			"Usage: pixed [-w WIDTH -h HEIGHT] FILENAME\n"
+			"\t-w: set width for new image.\n"
+			"\t-h: set height for new image.\n"
+			"When width and height are specified, file is created anew.\n"
+			"When no width and height are supplied, file is loaded.\n"
+			);
 	QTextStream out(stdout);
-	out << QObject::tr("Simple pixel graphic editor.") << endl;
-	out << QObject::tr("Usage: pixed FILENAME") << endl;
-	return -1;
+	out << usage;
+	return false;
+}
+
+bool Options::parse()
+{
+	QGetopt getopt;
+	getopt.addOptionWithArg('w', "width").addOptionWithArg('h', "height");
+	try {
+		getopt.parseApplicationArguments();
+	} catch(QGetopt::GetoptException & e) {
+		return printUsage();
+	}
+	bool hasWidthOrHeight = getopt.hasOption('w') || getopt.hasOption('h');
+	hasSize = getopt.hasOption('w') && getopt.hasOption('h');
+	if(hasWidthOrHeight && !hasSize) {
+		return printUsage();
+	}
+	if(hasSize) {
+		bool ok = false;
+		width = getopt.getArg('w').toInt(&ok);
+		if(!ok || width <= 0) {
+			return printUsage();
+		}
+		height = getopt.getArg('h').toInt(&ok);
+		if(!ok || height <= 0) {
+			return printUsage();
+		}
+	}
+	if(getopt.getNonArgs().count() < 1) {
+		return printUsage();
+	}
+	filename = getopt.getNonArgs().first();
+	return true;
 }
 
 int main(int argc, char ** argv)
@@ -16,16 +65,12 @@ int main(int argc, char ** argv)
 	app.setOrganizationName("kp580bm1");
 	app.setApplicationName("pixed");
 
-	QStringList args = app.arguments();
-	args.removeAt(0); // Program name;
-	QString fileName;
-	if(args.count() > 0) {
-		fileName = args[0];
-	} else {
-		return printUsage();
+	Options options;
+	if(!options.parse()) {
+		return 1;
 	}
 
-	PixelWidget widget(fileName);
+	PixelWidget widget(options.filename, QSize(options.width, options.height));
 	widget.showFullScreen();
 	return app.exec();
 }
