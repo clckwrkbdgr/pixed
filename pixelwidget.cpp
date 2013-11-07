@@ -337,6 +337,24 @@ void drawGrid(QPainter * painter, const QSize & imageSize, const QPoint & topLef
 	painter->drawLines(black_lines);
 }
 
+QString colorToString(const QColor & color)
+{
+	if(color.alpha() < 255) {
+		return QString("#%1%2%3%4").
+			arg(color.alpha(), 2, 16, QChar('0')).
+			arg(color.red(), 2, 16, QChar('0')).
+			arg(color.green(), 2, 16, QChar('0')).
+			arg(color.blue(), 2, 16, QChar('0'))
+			;
+	} else {
+		return QString("#%1%2%3").
+			arg(color.red(), 2, 16, QChar('0')).
+			arg(color.green(), 2, 16, QChar('0')).
+			arg(color.blue(), 2, 16, QChar('0'))
+			;
+	}
+}
+
 void PixelWidget::paintEvent(QPaintEvent*)
 {
 	QPoint leftTop = rect().center() - (canvas.rect().center() - canvasShift) * zoomFactor;
@@ -387,14 +405,12 @@ void PixelWidget::paintEvent(QPaintEvent*)
 
 	painter.fillRect(QRect(33, 0, width() - 33, 32), Qt::black);
 	if(colorInputMode) {
-		painter.drawText(currentColorAreaShift + QPoint(32, 32), colorEntered);
+		painter.drawText(currentColorAreaShift + QPoint(32, 32) + QPoint(5, -5), colorEntered);
 	} else {
-		QColor realColor = indexToRealColor(color);
-		QString text =
-			"#" + (realColor.alpha() == 255 ? "" : QString("%1").arg(realColor.alpha(), 2, 16, QChar('0'))) +
-			QString("%1%2%3").arg(realColor.red(), 2, 16, QChar('0')).arg(realColor.green(), 2, 16, QChar('0')).arg(realColor.blue(), 2, 16, QChar('0'))
-			;
-		painter.drawText(currentColorAreaShift + QPoint(32, 32), text);
+		painter.drawText(
+				currentColorAreaShift + QPoint(32, 32) + QPoint(5, -5),
+				colorToString(indexToRealColor(color)) + " [" + colorToString(indexToRealColor(indexAtPos(cursor))) + "]"
+				);
 	}
 }
 
