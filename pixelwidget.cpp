@@ -131,7 +131,7 @@ uint indexAtPos(const QImage & image, const QPoint & pos)
 	return 0;
 }
 
-void runFloodFill(QImage * image, const QPoint & pos, uint colorToPaintOver, uint colorWhichIsNeeded, int counter = 10)
+void runFloodFill(QImage * image, const QPoint & pos, uint colorToPaintOver, uint colorWhichIsNeeded, int counter = 200000)
 {
 	if(counter < 0)
 		return;
@@ -288,7 +288,7 @@ QColor PixelWidget::indexToRealColor(uint index)
 {
 	switch(canvas.depth()) {
 		case 1: case 8: return canvas.color(index);
-		case 32: return QColor(index);
+		case 32: return QColor::fromRgba(index);
 	}
 	return QColor();
 }
@@ -364,8 +364,10 @@ void PixelWidget::paintEvent(QPaintEvent*)
 		drawGrid(&painter, canvas.size(), imageRect.topLeft(), zoomFactor);
 	}
 
+	painter.setCompositionMode(QPainter::CompositionMode_Destination);
 	painter.fillRect(cursorRect, indexToRealColor(indexAtPos(cursor)));
 	drawCursor(&painter, cursorRect);
+	painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
 
 	QPoint currentColorAreaShift;
 	if(hasPalette) {
@@ -375,12 +377,24 @@ void PixelWidget::paintEvent(QPaintEvent*)
 		painter.drawRect(0, 0, 32, 32 * canvas.colorCount());
 		currentColorAreaShift = QPoint(0, color * 32);
 	}
+	painter.fillRect(currentColorRect.translated(currentColorAreaShift), Qt::black);
 	painter.setBrush(indexToRealColor(color));
 	painter.drawRect(currentColorRect.translated(currentColorAreaShift));
+
+	painter.fillRect(colorUnderCursorRect.translated(currentColorAreaShift), Qt::black);
 	painter.setBrush(indexToRealColor(indexAtPos(cursor)));
 	painter.drawRect(colorUnderCursorRect.translated(currentColorAreaShift));
+
+	painter.fillRect(QRect(33, 0, width() - 33, 32), Qt::black);
 	if(colorInputMode) {
 		painter.drawText(currentColorAreaShift + QPoint(32, 32), colorEntered);
+	} else {
+		QColor realColor = indexToRealColor(color);
+		QString text =
+			"#" + (realColor.alpha() == 255 ? "" : QString("%1").arg(realColor.alpha(), 2, 16, QChar('0'))) +
+			QString("%1%2%3").arg(realColor.red(), 2, 16, QChar('0')).arg(realColor.green(), 2, 16, QChar('0')).arg(realColor.blue(), 2, 16, QChar('0'))
+			;
+		painter.drawText(currentColorAreaShift + QPoint(32, 32), text);
 	}
 }
 
