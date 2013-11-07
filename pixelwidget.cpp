@@ -38,10 +38,13 @@ PixelWidget::PixelWidget(const QString & imageFileName, const QSize & newSize, Q
 			canvas.setColorCount(16);
 		} else if(canvas.colorCount() > 16 && canvas.colorCount() < 256) {
 			canvas.setColorCount(256);
+		} else {
+			color = qRgba(0, 0, 0, 255);
 		}
 	} else {
-		canvas = QImage(newSize, QImage::Format_RGB32);
-		canvas.fill(0);
+		color = qRgba(0, 0, 0, 255);
+		canvas = QImage(newSize.isNull() ? QSize(32, 32) : newSize, QImage::Format_ARGB32);
+		canvas.fill(color);
 	}
 	update();
 }
@@ -54,14 +57,27 @@ PixelWidget::~PixelWidget()
 void PixelWidget::keyPressEvent(QKeyEvent * event)
 {
 	if(colorInputMode) {
+		bool isText = false;
 		switch(event->key()) {
-			case Qt::Key_Backspace: if(colorEntered.size() > 1) colorEntered.remove(colorEntered.size() - 1); break;
+			case Qt::Key_Backspace:
+				if(colorEntered.size() > 1) {
+					colorEntered.remove(colorEntered.size() - 1, 1);
+				}
+				break;
 			case Qt::Key_Return: case Qt::Key_Enter: endColorInput(); break;
 			case Qt::Key_Escape: colorEntered = ""; endColorInput(); break;
-			default: colorEntered += event->text();
+			default: isText = true;
+		}
+		if(isText) {
+			foreach(const QChar & c, event->text()) {
+				if(QString("0123456789ABCDEFabcdef").contains(c)) {
+					colorEntered += c;
+				}
+			}
 		}
 		wholeScreenChanged = false;
 		update();
+		return;
 	}
 
 	QPoint shift;
@@ -115,19 +131,23 @@ uint indexAtPos(const QImage & image, const QPoint & pos)
 	return 0;
 }
 
-void runFloodFill(QImage * image, const QPoint & pos, uint colorToPaintOver, uint colorWhichIsNeeded)
+void runFloodFill(QImage * image, const QPoint & pos, uint colorToPaintOver, uint colorWhichIsNeeded, int counter = 10)
 {
+	if(counter < 0)
+		return;
 	if(image == NULL)
 		return;
 	if(!image->valid(pos))
 		return;
+	if(indexAtPos(*image, pos) == colorWhichIsNeeded)
+		return;
 	if(indexAtPos(*image, pos) != colorToPaintOver)
 		return;
 	image->setPixel(pos, colorWhichIsNeeded);
-	runFloodFill(image, pos + QPoint( 1, 0), colorToPaintOver, colorWhichIsNeeded);
-	runFloodFill(image, pos + QPoint(-1, 0), colorToPaintOver, colorWhichIsNeeded);
-	runFloodFill(image, pos + QPoint(0,  1), colorToPaintOver, colorWhichIsNeeded);
-	runFloodFill(image, pos + QPoint(0, -1), colorToPaintOver, colorWhichIsNeeded);
+	runFloodFill(image, pos + QPoint( 1, 0), colorToPaintOver, colorWhichIsNeeded, counter - 1);
+	runFloodFill(image, pos + QPoint(-1, 0), colorToPaintOver, colorWhichIsNeeded, counter - 1);
+	runFloodFill(image, pos + QPoint(0,  1), colorToPaintOver, colorWhichIsNeeded, counter - 1);
+	runFloodFill(image, pos + QPoint(0, -1), colorToPaintOver, colorWhichIsNeeded, counter - 1);
 }
 
 void PixelWidget::floodFill()
@@ -174,12 +194,28 @@ void PixelWidget::endColorInput()
 {
 	colorInputMode = false;
 	bool hasPalette = (canvas.colorCount() > 0);
-	QColor value = QColor(colorEntered);
+	if(colorEntered.startsWith('#')) {
+		colorEntered.remove(0, 1);
+	}
+	QColor value;
+	if(colorEntered.size() % 2 == 0) {
+		if(colorEntered.length() < 8) {
+			colorEntered.prepend("ff");
+		}
+		if(colorEntered.length() == 8) {
+			bool ok = false;
+			int alpha = colorEntered.mid(0, 2).toInt(&ok, 16);
+			int red = colorEntered.mid(2, 2).toInt(&ok, 16);
+			int green = colorEntered.mid(4, 2).toInt(&ok, 16);
+			int blue = colorEntered.mid(6, 2).toInt(&ok, 16);
+			value = QColor(red, green, blue, alpha);
+		}
+	}
 	if(value.isValid()) {
 		if(hasPalette) {
 			canvas.setColor(color, value.rgb());
 		} else {
-			color = value.rgb();
+			color = value.rgba();
 		}
 	}
 	wholeScreenChanged = false;
