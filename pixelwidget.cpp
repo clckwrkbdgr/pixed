@@ -109,6 +109,8 @@ void PixelWidget::keyPressEvent(QKeyEvent * event)
 	if(!shift.isNull()) {
 		if(event->modifiers().testFlag(Qt::ShiftModifier)) {
 			shiftCanvas(shift);
+		} else if(event->modifiers().testFlag(Qt::ControlModifier)) {
+			shiftCursor(shift, 10);
 		} else {
 			shiftCursor(shift);
 		}
@@ -242,9 +244,16 @@ void PixelWidget::shiftCanvas(const QPoint & shift)
 	update();
 }
 
-void PixelWidget::shiftCursor(const QPoint & shift)
+void PixelWidget::shiftCursor(const QPoint & shift, int speed)
 {
-	QPoint newCursor = cursor + shift;
+	if(speed < 1) {
+		return;
+	}
+	QPoint newCursor = cursor + shift * speed;
+	if(speed > 1) {
+		newCursor.setX(qBound(0, newCursor.x(), canvas.width() - 1));
+		newCursor.setY(qBound(0, newCursor.y(), canvas.height() - 1));
+	}
 	if(newCursor.x() < 0 || newCursor.x() >= canvas.width() || newCursor.y() < 0 || newCursor.y() >= canvas.height()) {
 		return;
 	}

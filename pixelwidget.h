@@ -30,7 +30,7 @@ private:
 	void zoomOut();
 	void shiftCanvas(const QPoint & shift);
 	void centerCanvas();
-	void shiftCursor(const QPoint & shift);
+	void shiftCursor(const QPoint & shift, int speed = 1);
 	void putColorAtCursor();
 	void takeColorUnderCursor();
 	void startColorInput();
