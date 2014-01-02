@@ -8,20 +8,13 @@ private slots:
 	void should_make_palette_with_one_opaque_black_color_by_default();
 	void should_fill_image_with_default_color_on_create();
 	void should_fill_image_with_color();
-	void should_resize_palette();
-	void palette_should_be_at_least_1_color();
-	void should_keep_existing_colours_when_resizing_palette();
-	void should_fill_new_colours_with_opaque_black_color_when_resizing_palette();
 	void should_resize_image();
 	void should_not_resize_image_if_width_is_zero();
 	void should_not_resize_image_if_height_is_zero();
 	void should_keep_existing_pixels_when_resizing_image();
 	void should_fill_new_pixels_with_default_index_when_resizing_image();
-	void should_get_pixel_color();
 	void should_get_pixel_index();
 	void should_set_pixel_index();
-	void should_use_first_matching_index_when_setting_pixel_color();
-	void should_add_color_if_not_exist_when_setting_pixel_color();
 	void should_flood_fill_area();
 	void should_change_palette_color_value();
 	void should_add_new_color_to_palette();
@@ -48,47 +41,12 @@ void PixmapTest::should_fill_image_with_color()
 {
 	Pixmap pixmap(2, 2);
 	unsigned color = pixmap.add_color(0xffffff);
-	pixmap.fill(0);
+	pixmap.fill(color);
 	for(unsigned x = 0; x < 2; ++x) {
 		for(unsigned y = 0; y < 2; ++y) {
 			QCOMPARE(pixmap.pixel(x, y), color);
 		}
 	}
-}
-
-void PixmapTest::should_resize_palette()
-{
-	Pixmap pixmap(2, 2);
-	pixmap.resize_palette(10);
-	QCOMPARE(pixmap.color_count(), 10u);
-}
-
-void PixmapTest::palette_should_be_at_least_1_color()
-{
-	Pixmap pixmap(2, 2, 2);
-	pixmap.resize_palette(0);
-	QCOMPARE(pixmap.color_count(), 1u);
-}
-
-void PixmapTest::should_keep_existing_colours_when_resizing_palette()
-{
-	Pixmap pixmap(2, 2, 3);
-	pixmap.set_color(0, 1);
-	pixmap.set_color(1, 2);
-	pixmap.set_color(2, 3);
-	pixmap.resize_palette(2);
-	QCOMPARE(pixmap.color(0), 1u);
-	QCOMPARE(pixmap.color(1), 2u);
-}
-
-void PixmapTest::should_fill_new_colours_with_opaque_black_color_when_resizing_palette()
-{
-	Pixmap pixmap(2, 2, 2);
-	pixmap.set_color(0, 1);
-	pixmap.set_color(1, 2);
-	pixmap.resize_palette(4);
-	QCOMPARE(pixmap.color(2), 0xff000000);
-	QCOMPARE(pixmap.color(3), 0xff000000);
 }
 
 void PixmapTest::should_resize_image()
@@ -141,16 +99,11 @@ void PixmapTest::should_fill_new_pixels_with_default_index_when_resizing_image()
 	QCOMPARE(pixmap.pixel(1, 2), 0u);
 }
 
-void PixmapTest::should_get_pixel_color()
-{
-	Pixmap pixmap(2, 2, 2);
-	QCOMPARE(pixmap.pixel_color(0, 0), 0xff000000);
-}
-
 void PixmapTest::should_get_pixel_index()
 {
 	Pixmap pixmap(2, 2, 2);
-	QCOMPARE(pixmap.pixel(0, 0), 0u);
+	pixmap.set_pixel(0, 0, 1);
+	QCOMPARE(pixmap.pixel(0, 0), 1u);
 }
 
 void PixmapTest::should_set_pixel_index()
@@ -158,23 +111,6 @@ void PixmapTest::should_set_pixel_index()
 	Pixmap pixmap(2, 2, 2);
 	pixmap.set_pixel(0, 0, 1);
 	QCOMPARE(pixmap.pixel(0, 0), 1u);
-}
-
-void PixmapTest::should_use_first_matching_index_when_setting_pixel_color()
-{
-	Pixmap pixmap(2, 2, 2);
-	pixmap.set_color(1, 0xffff0000);
-	pixmap.set_pixel_color(0, 0, 0xffff0000);
-	QCOMPARE(pixmap.pixel(0, 0), 1u);
-}
-
-void PixmapTest::should_add_color_if_not_exist_when_setting_pixel_color()
-{
-	Pixmap pixmap(2, 2, 2);
-	pixmap.set_color(1, 0xffff0000);
-	pixmap.set_pixel_color(0, 0, 0xffff00ff);
-	QCOMPARE(pixmap.color(2), 0xffff00ff);
-	QCOMPARE(pixmap.pixel(0, 0), 2u);
 }
 
 void PixmapTest::should_flood_fill_area()
