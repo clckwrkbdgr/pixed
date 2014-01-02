@@ -6,9 +6,10 @@ PIXMAP_TEST {
 	DEFINES += PIXMAP_TEST
 	QT += testlib
 	SOURCES += pixmap_test.cpp
+	modules += pixmap
 } else {
 	SOURCES += main.cpp
-	modules = pixelwidget qgetopt
+	modules = pixmap pixelwidget qgetopt
 }
 
 for(module, modules) {
