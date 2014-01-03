@@ -16,8 +16,7 @@ WIDTH and HEIGHT must be greater than zero and must be present together. When wi
 Interface
 ---------
 Image will be displayed in the center of the screen.
-On the left side of the screen there is a color information present: palette for images that has one or simple current color view.
-If images has palette there also will be current color view attached to the right of palette, pointing at current choice of color.
+On the left side of the screen there is a color information present: palette for images that has one and current color view attached to the right, pointing at current choice of color.
 At the corner of the current color view there is a small rectangle which displays color that are right under cursor on the image.
 
 Controls
@@ -37,7 +36,8 @@ Controls
 
 Color input mode
 ----------------
-Mode which allows to change current color for TrueColor images or change current color of palette.
-After pressing '#' key that sign will be displayed to the right of the current color view. It acts like a prompt: one can enter color value like #fff, #ff00ff etc.
+This allows to change current color value.
+After pressing '#' key this symbol will be displayed to the right of the current color view. It acts like a prompt: one can enter color value like #fff, #ff00ff etc.
 Editing finished when either Enter or Esc keys are pressed. In latter case, color input is cancelled.
-Entered color will be immediately set for TrueColor images as current color, and for paletted ones it will replace current color of palette, resulting in immediate replacing that color everywhere on the image.
+If entered value is '-', color is considered to be fully transparent ("None" color).
+Entered color will replace current color of palette, resulting in immediate repainting that color everywhere on the image.

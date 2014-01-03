@@ -24,7 +24,7 @@ private:
 	bool do_draw_grid;
 
 	void switch_draw_grid();
-	QColor indexToRealColor(uint index);
+	Pixmap::Color indexToRealColor(uint index);
 	uint indexAtPos(const QPoint & pos);
 	void floodFill();
 	void zoomIn();

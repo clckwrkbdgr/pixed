@@ -19,8 +19,7 @@ PixelWidget::PixelWidget(const QString & imageFileName, const QSize & newSize, Q
 		for(int x = 0; x < image.width(); ++x) {
 			for(int y = 0; y < image.height(); ++y) {
 				unsigned index = 0;
-				QColor c = image.pixel(x, y);
-				qDebug() << c.alpha() << image.format() << image.hasAlphaChannel() << QString::number(c.rgba(), 16);
+				QColor c = QColor::fromRgba(image.pixel(x, y));
 				Pixmap::Color pc = (c.alpha() == 0) ? Pixmap::Color() : Pixmap::Color(c.red(), c.green(), c.blue());
 				if(first) {
 					first = false;
@@ -76,7 +75,12 @@ void PixelWidget::keyPressEvent(QKeyEvent * event)
 		}
 		if(isText) {
 			foreach(const QChar & c, event->text()) {
-				if(QString("0123456789ABCDEFabcdef").contains(c)) {
+				if(c == '-') {
+					colorEntered = "-";
+				} else if(QString("0123456789ABCDEFabcdef").contains(c)) {
+					if(colorEntered == "-") {
+						colorEntered = "";
+					}
 					colorEntered += c;
 				}
 			}
@@ -180,23 +184,19 @@ void PixelWidget::endColorInput()
 	if(colorEntered.startsWith('#')) {
 		colorEntered.remove(0, 1);
 	}
-	QColor value;
-	if(colorEntered.size() % 2 == 0) {
-		if(colorEntered.length() < 8) {
-			colorEntered.prepend("ff");
-		}
-		if(colorEntered.length() == 8) {
+	Pixmap::Color value;
+	if(colorEntered == "-") {
+		value = Pixmap::Color();
+	} else if(colorEntered.size() % 2 == 0) {
+		if(colorEntered.length() == 6) {
 			bool ok = false;
-			int alpha = colorEntered.mid(0, 2).toInt(&ok, 16);
 			int red = colorEntered.mid(2, 2).toInt(&ok, 16);
 			int green = colorEntered.mid(4, 2).toInt(&ok, 16);
 			int blue = colorEntered.mid(6, 2).toInt(&ok, 16);
-			value = QColor(red, green, blue, alpha);
+			value = Pixmap::Color(red, green, blue);
 		}
 	}
-	if(value.isValid()) {
-		canvas.set_color(color, Pixmap::Color::from_argb(value.rgba()));
-	}
+	canvas.set_color(color, value);
 	wholeScreenChanged = false;
 	update();
 }
@@ -267,9 +267,9 @@ uint PixelWidget::indexAtPos(const QPoint & pos)
 	return canvas.pixel(pos.x(), pos.y());
 }
 
-QColor PixelWidget::indexToRealColor(uint index)
+Pixmap::Color PixelWidget::indexToRealColor(uint index)
 {
-	return canvas.color(index).argb();
+	return canvas.color(index);
 }
 
 void drawCursor(QPainter * painter, const QRect & rect)
@@ -316,22 +316,16 @@ void drawGrid(QPainter * painter, const QSize & imageSize, const QPoint & topLef
 	painter->drawLines(black_lines);
 }
 
-QString colorToString(const QColor & color)
+QString colorToString(const Pixmap::Color & color)
 {
-	if(color.alpha() < 255) {
-		return QString("#%1%2%3%4").
-			arg(color.alpha(), 2, 16, QChar('0')).
-			arg(color.red(), 2, 16, QChar('0')).
-			arg(color.green(), 2, 16, QChar('0')).
-			arg(color.blue(), 2, 16, QChar('0'))
-			;
-	} else {
-		return QString("#%1%2%3").
-			arg(color.red(), 2, 16, QChar('0')).
-			arg(color.green(), 2, 16, QChar('0')).
-			arg(color.blue(), 2, 16, QChar('0'))
-			;
+	if(color.transparent) {
+		return "None";
 	}
+	return QString("#%1%2%3").
+		arg(color.r, 2, 16, QChar('0')).
+		arg(color.g, 2, 16, QChar('0')).
+		arg(color.b, 2, 16, QChar('0'))
+		;
 }
 
 void PixelWidget::paintEvent(QPaintEvent*)
@@ -369,31 +363,30 @@ void PixelWidget::paintEvent(QPaintEvent*)
 	}
 
 	painter.setCompositionMode(QPainter::CompositionMode_Destination);
-	painter.fillRect(cursorRect, indexToRealColor(indexAtPos(cursor)));
+	painter.fillRect(cursorRect, indexToRealColor(indexAtPos(cursor)).argb());
 	drawCursor(&painter, cursorRect);
 	painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
 
 	QPoint currentColorAreaShift;
-	qDebug() << canvas.color_count();
 	for(unsigned i = 0; i < canvas.color_count(); ++i) {
 		painter.fillRect(QRect(0, 32 * i, 32, 32), canvas.color(i).argb());
 	}
 	painter.drawRect(0, 0, 32, 32 * canvas.color_count());
 	currentColorAreaShift = QPoint(0, color * 32);
 	painter.fillRect(currentColorRect.translated(currentColorAreaShift), Qt::black);
-	painter.setBrush(indexToRealColor(color));
+	painter.setBrush(QColor(indexToRealColor(color).argb()));
 	painter.drawRect(currentColorRect.translated(currentColorAreaShift));
 
 	painter.fillRect(colorUnderCursorRect.translated(currentColorAreaShift), Qt::black);
-	painter.setBrush(indexToRealColor(indexAtPos(cursor)));
+	painter.setBrush(QColor(indexToRealColor(indexAtPos(cursor)).argb()));
 	painter.drawRect(colorUnderCursorRect.translated(currentColorAreaShift));
 
 	painter.fillRect(QRect(33, 0, width() - 33, 32), Qt::black);
 	if(colorInputMode) {
-		painter.drawText(currentColorAreaShift + QPoint(32, 32) + QPoint(5, -5), colorEntered);
+		painter.drawText(QPoint(32, 32) + QPoint(5, -5), colorEntered);
 	} else {
 		painter.drawText(
-				currentColorAreaShift + QPoint(32, 32) + QPoint(5, -5),
+				QPoint(32, 32) + QPoint(5, -5),
 				colorToString(indexToRealColor(color)) + " [" + colorToString(indexToRealColor(indexAtPos(cursor))) + "]"
 				);
 	}
