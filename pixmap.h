@@ -9,7 +9,9 @@ public:
 		uint8_t r, g, b;
 		Color();
 		Color(uint8_t c_r, uint8_t c_g, uint8_t c_b);
+		uint32_t argb() const;
 		bool operator==(const Color & other) const;
+		static Color from_argb(uint32_t color);
 	};
 
 	Pixmap(unsigned w, unsigned h, unsigned palette_size = 1);

@@ -5,6 +5,10 @@
 class PixmapTest : public QObject {
 	Q_OBJECT
 private slots:
+	void should_construct_color_from_argb();
+	void should_construct_transparent_color_from_argb_with_zero_alpha();
+	void should_get_transparent_rgba_as_transparent_black();
+	void should_get_rgba_from_opaque_color();
 	void should_make_palette_with_one_opaque_black_color_by_default();
 	void should_fill_image_with_default_color_on_create();
 	void should_fill_image_with_color();
@@ -21,6 +25,36 @@ private slots:
 	void should_consider_transparent_color_transparent();
 	void should_consider_default_color_transparent();
 };
+
+void PixmapTest::should_construct_color_from_argb()
+{
+	Pixmap::Color c = Pixmap::Color::from_argb(0x00ff00ff);
+	QVERIFY(c.transparent);
+	QCOMPARE((int)c.r, 0);
+	QCOMPARE((int)c.g, 0);
+	QCOMPARE((int)c.b, 0);
+}
+
+void PixmapTest::should_construct_transparent_color_from_argb_with_zero_alpha()
+{
+	Pixmap::Color c = Pixmap::Color::from_argb(0xf0ff00ff);
+	QVERIFY(!c.transparent);
+	QCOMPARE((int)c.r, 255);
+	QCOMPARE((int)c.g, 0);
+	QCOMPARE((int)c.b, 255);
+}
+
+void PixmapTest::should_get_transparent_rgba_as_transparent_black()
+{
+	Pixmap::Color c;
+	QCOMPARE(c.argb(), 0u);
+}
+
+void PixmapTest::should_get_rgba_from_opaque_color()
+{
+	Pixmap::Color c(255, 0, 255);
+	QCOMPARE(c.argb(), 0xffff00ff);
+}
 
 void PixmapTest::should_make_palette_with_one_opaque_black_color_by_default()
 {

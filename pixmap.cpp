@@ -11,6 +11,22 @@ Pixmap::Color::Color(uint8_t c_r, uint8_t c_g, uint8_t c_b)
 {
 }
 
+uint32_t Pixmap::Color::argb() const
+{
+	if(transparent) {
+		return 0;
+	}
+	return (0xff << 24) | (r << 16) | (g << 8) | b;
+}
+
+Pixmap::Color Pixmap::Color::from_argb(uint32_t color)
+{
+	if((color >> 24) == 0) {
+		return Color();
+	}
+	return Color((color >> 16) & 0xff, (color >> 8) & 0xff, color & 0xff);
+}
+
 bool Pixmap::Color::operator==(const Color & other) const
 {
 	return (transparent == other.transparent) || (r == other.r && g == other.g && b == other.b);

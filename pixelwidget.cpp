@@ -7,18 +7,6 @@
 
 const int MIN_ZOOM_FACTOR = 2;
 
-QString toString(const QList<int> & list)
-{
-	QStringList result;
-	foreach(const int value, list) {
-		result << QString::number(value);
-	}
-	if(result.isEmpty()) {
-		return "None";
-	}
-	return result.join(", ");
-}
-
 PixelWidget::PixelWidget(const QString & imageFileName, const QSize & newSize, QWidget * parent)
 	: QWidget(parent), zoomFactor(4), color(0), fileName(imageFileName), canvas(32, 32), colorInputMode(false), wholeScreenChanged(true), do_draw_grid(false)
 {
@@ -32,18 +20,17 @@ PixelWidget::PixelWidget(const QString & imageFileName, const QSize & newSize, Q
 			for(int y = 0; y < image.height(); ++y) {
 				unsigned index = 0;
 				QColor c = image.pixel(x, y);
+				qDebug() << c.alpha() << image.format() << image.hasAlphaChannel() << QString::number(c.rgba(), 16);
+				Pixmap::Color pc = (c.alpha() == 0) ? Pixmap::Color() : Pixmap::Color(c.red(), c.green(), c.blue());
 				if(first) {
 					first = false;
 					palette << c;
-					canvas.set_color(0, c.rgba());
+					canvas.set_color(0, pc);
 				} else if(palette.contains(c)) {
 					index = palette.indexOf(c);
 				} else {
-					index = canvas.add_color(c.rgba());
+					index = canvas.add_color(pc);
 					palette << c;
-				}
-				if(y == 1) {
-					qDebug() << QString::number(c.rgba(), 16) << index;
 				}
 				canvas.set_pixel(x, y, index);
 			}
@@ -67,7 +54,7 @@ void PixelWidget::save()
 	QImage image(canvas.width(), canvas.height(), QImage::Format_ARGB32);
 	for(unsigned x = 0; x < canvas.width(); ++x) {
 		for(unsigned y = 0; y < canvas.height(); ++y) {
-			image.setPixel(x, y, canvas.color(canvas.pixel(x, y)));
+			image.setPixel(x, y, canvas.color(canvas.pixel(x, y)).argb());
 		}
 	}
 	image.save(fileName);
@@ -152,25 +139,6 @@ uint indexAtPos(const QImage & image, const QPoint & pos)
 	return 0;
 }
 
-void runFloodFill(QImage * image, const QPoint & pos, uint colorToPaintOver, uint colorWhichIsNeeded, int counter = 200000)
-{
-	if(counter < 0)
-		return;
-	if(image == NULL)
-		return;
-	if(!image->valid(pos))
-		return;
-	if(indexAtPos(*image, pos) == colorWhichIsNeeded)
-		return;
-	if(indexAtPos(*image, pos) != colorToPaintOver)
-		return;
-	image->setPixel(pos, colorWhichIsNeeded);
-	runFloodFill(image, pos + QPoint( 1, 0), colorToPaintOver, colorWhichIsNeeded, counter - 1);
-	runFloodFill(image, pos + QPoint(-1, 0), colorToPaintOver, colorWhichIsNeeded, counter - 1);
-	runFloodFill(image, pos + QPoint(0,  1), colorToPaintOver, colorWhichIsNeeded, counter - 1);
-	runFloodFill(image, pos + QPoint(0, -1), colorToPaintOver, colorWhichIsNeeded, counter - 1);
-}
-
 void PixelWidget::floodFill()
 {
 	canvas.floodfill(cursor.x(), cursor.y(), color);
@@ -227,7 +195,7 @@ void PixelWidget::endColorInput()
 		}
 	}
 	if(value.isValid()) {
-		canvas.set_color(color, value.rgba());
+		canvas.set_color(color, Pixmap::Color::from_argb(value.rgba()));
 	}
 	wholeScreenChanged = false;
 	update();
@@ -301,7 +269,7 @@ uint PixelWidget::indexAtPos(const QPoint & pos)
 
 QColor PixelWidget::indexToRealColor(uint index)
 {
-	return canvas.color(index);
+	return canvas.color(index).argb();
 }
 
 void drawCursor(QPainter * painter, const QRect & rect)
@@ -385,7 +353,10 @@ void PixelWidget::paintEvent(QPaintEvent*)
 		painter.drawRect(imageRect.adjusted(-1, -1, 0, 0));
 		for(unsigned x = 0; x < canvas.width(); ++x) {
 			for(unsigned y = 0; y < canvas.height(); ++y) {
-				painter.fillRect(QRect(imageRect.topLeft() + QPoint(x * zoomFactor, y * zoomFactor), QSize(zoomFactor, zoomFactor)), canvas.color(canvas.pixel(x, y)));
+				painter.fillRect(
+						QRect(imageRect.topLeft() + QPoint(x * zoomFactor, y * zoomFactor), QSize(zoomFactor, zoomFactor)),
+						canvas.color(canvas.pixel(x, y)).argb()
+						);
 			}
 		}
 	} else {
@@ -405,7 +376,7 @@ void PixelWidget::paintEvent(QPaintEvent*)
 	QPoint currentColorAreaShift;
 	qDebug() << canvas.color_count();
 	for(unsigned i = 0; i < canvas.color_count(); ++i) {
-		painter.fillRect(QRect(0, 32 * i, 32, 32), canvas.color(i));
+		painter.fillRect(QRect(0, 32 * i, 32, 32), canvas.color(i).argb());
 	}
 	painter.drawRect(0, 0, 32, 32 * canvas.color_count());
 	currentColorAreaShift = QPoint(0, color * 32);
