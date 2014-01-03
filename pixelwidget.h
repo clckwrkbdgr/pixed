@@ -1,4 +1,5 @@
 #pragma once
+#include "pixmap.h"
 #include <QtGui/QWidget>
 
 class PixelWidget : public QWidget {
@@ -16,7 +17,7 @@ private:
 	QPoint cursor, oldCursor;
 	uint color;
 	QString fileName;
-	QImage canvas;
+	Pixmap canvas;
 	bool colorInputMode;
 	QString colorEntered;
 	bool wholeScreenChanged;
@@ -37,4 +38,5 @@ private:
 	void endColorInput();
 	void pickNextColor();
 	void pickPrevColor();
+	void save();
 };
