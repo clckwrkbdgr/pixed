@@ -1,8 +1,24 @@
 #include "pixmap.h"
 #include <QtDebug>
 
+Pixmap::Color::Color()
+	: transparent(true), r(0), g(0), b(0)
+{
+}
+
+Pixmap::Color::Color(uint8_t c_r, uint8_t c_g, uint8_t c_b)
+	: transparent(false), r(c_r), g(c_g), b(c_b)
+{
+}
+
+bool Pixmap::Color::operator==(const Color & other) const
+{
+	return (transparent == other.transparent) || (r == other.r && g == other.g && b == other.b);
+}
+
+		
 Pixmap::Pixmap(unsigned pixmap_width, unsigned pixmap_height, unsigned palette_size)
-	: w(pixmap_width), h(pixmap_height), pixels(w * h, 0), palette(palette_size > 1 ? palette_size : 1, Color(0xff000000))
+	: w(pixmap_width), h(pixmap_height), pixels(w * h, 0), palette(palette_size > 1 ? palette_size : 1, Color(0, 0, 0))
 {
 }
 
@@ -129,6 +145,14 @@ bool Pixmap::set_color(unsigned index, Pixmap::Color new_color)
 	if(index < palette.size()) {
 		palette[index] = new_color;
 		return true;
+	}
+	return false;
+}
+
+bool Pixmap::is_transparent_color(unsigned index) const
+{
+	if(index < palette.size()) {
+		return palette[index].transparent;
 	}
 	return false;
 }

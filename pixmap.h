@@ -4,7 +4,13 @@
 
 class Pixmap {
 public:
-	typedef uint32_t Color;
+	struct Color {
+		bool transparent;
+		uint8_t r, g, b;
+		Color();
+		Color(uint8_t c_r, uint8_t c_g, uint8_t c_b);
+		bool operator==(const Color & other) const;
+	};
 
 	Pixmap(unsigned w, unsigned h, unsigned palette_size = 1);
 	bool valid(unsigned x, unsigned y) const;
@@ -19,7 +25,7 @@ public:
 
 	unsigned color_count() const;
 	Color color(unsigned index) const;
-
+	bool is_transparent_color(unsigned index) const;
 	unsigned add_color(Color new_color);
 	bool set_color(unsigned index, Color new_color);
 private:

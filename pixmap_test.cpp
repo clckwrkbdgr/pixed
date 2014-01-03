@@ -18,13 +18,15 @@ private slots:
 	void should_flood_fill_area();
 	void should_change_palette_color_value();
 	void should_add_new_color_to_palette();
+	void should_consider_transparent_color_transparent();
+	void should_consider_default_color_transparent();
 };
 
 void PixmapTest::should_make_palette_with_one_opaque_black_color_by_default()
 {
 	Pixmap pixmap(2, 2);
 	QCOMPARE(pixmap.color_count(), 1u);
-	QCOMPARE(pixmap.color(0), 0xff000000);
+	QCOMPARE(pixmap.color(0), Pixmap::Color(0, 0, 0));
 }
 
 void PixmapTest::should_fill_image_with_default_color_on_create()
@@ -40,7 +42,7 @@ void PixmapTest::should_fill_image_with_default_color_on_create()
 void PixmapTest::should_fill_image_with_color()
 {
 	Pixmap pixmap(2, 2);
-	unsigned color = pixmap.add_color(0xffffff);
+	unsigned color = pixmap.add_color(Pixmap::Color(255, 255, 255));
 	pixmap.fill(color);
 	for(unsigned x = 0; x < 2; ++x) {
 		for(unsigned y = 0; y < 2; ++y) {
@@ -148,16 +150,32 @@ void PixmapTest::should_flood_fill_area()
 void PixmapTest::should_change_palette_color_value()
 {
 	Pixmap pixmap(2, 2, 2);
-	pixmap.set_color(1, 0xff00ff00);
-	QCOMPARE(pixmap.color(1), 0xff00ff00);
+	pixmap.set_color(1, Pixmap::Color(0, 255, 0));
+	QCOMPARE(pixmap.color(1), Pixmap::Color(0, 255, 0));
 }
 
 void PixmapTest::should_add_new_color_to_palette()
 {
 	Pixmap pixmap(2, 2, 2);
-	unsigned index = pixmap.add_color(0xff00ff00);
+	unsigned index = pixmap.add_color(Pixmap::Color(0, 255, 0));
 	QCOMPARE(index, 2u);
-	QCOMPARE(pixmap.color(2), 0xff00ff00);
+	QCOMPARE(pixmap.color(2), Pixmap::Color(0, 255, 0));
+}
+
+void PixmapTest::should_consider_transparent_color_transparent()
+{
+	Pixmap pixmap(2, 2, 2);
+	Pixmap::Color c(255, 255, 255);
+	c.transparent = true;
+	pixmap.set_color(0, c);
+	QVERIFY(pixmap.is_transparent_color(0));
+}
+
+void PixmapTest::should_consider_default_color_transparent()
+{
+	Pixmap pixmap(2, 2, 2);
+	pixmap.set_color(0, Pixmap::Color());
+	QVERIFY(pixmap.is_transparent_color(0));
 }
 
 QTEST_MAIN(PixmapTest)
