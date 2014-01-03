@@ -24,6 +24,38 @@ private slots:
 	void should_add_new_color_to_palette();
 	void should_consider_transparent_color_transparent();
 	void should_consider_default_color_transparent();
+
+	void should_load_pixmap_from_xpm_file();
+	void should_load_pixmap_from_text_lines();
+	void should_throw_exception_when_value_line_is_missing_in_xpm();
+	void should_throw_exception_when_colour_lines_are_missing_or_not_enough_in_xpm();
+	void should_throw_exception_when_pixel_lines_are_missing_or_not_enough_in_xpm();
+	void should_throw_exception_when_value_count_is_not_four_in_xpm();
+	void should_throw_exception_when_values_are_not_integer_in_xpm();
+	void should_throw_exception_when_colours_are_repeated_in_xpm();
+	void should_throw_exception_when_there_is_no_space_after_colour_in_xpm();
+	void should_throw_exception_when_colour_key_is_not_c_in_xpm();
+	void should_throw_exception_when_colour_key_is_missing_in_xpm();
+	void should_throw_exception_when_colour_value_is_missing_in_xpm();
+	void should_throw_exception_when_colour_value_is_invalid_in_xpm();
+	void shoudl_throw_exception_when_pixel_row_length_is_too_small_in_xpm();
+	void shoudl_throw_exception_when_pixel_row_length_is_too_large_in_xpm();
+	void shoudl_throw_exception_when_pixel_row_count_is_too_small_in_xpm();
+	void shoudl_throw_exception_when_pixel_row_count_is_too_large_in_xpm();
+	void shoudl_throw_exception_when_pixel_is_broken_in_xpm();
+	void shoudl_throw_exception_when_pixel_is_invalid_in_xpm();
+	void xpm_should_have_four_values();
+	void xpm_should_have_integer_values();
+	void xpm_colours_should_be_started_with_cpp_and_space();
+	void xpm_colour_key_should_be_only_c();
+	void should_save_pixmap_exactly_when_intact();
+	void should_keep_format_of_values_when_saving_xpm();
+	void should_keep_format_of_colours_when_saving_xpm();
+	void should_insert_line_breaks_when_colours_are_added_when_saving_xpm();
+	void should_lengthen_pixel_lines_when_width_is_increased_when_saving_xpm();
+	void should_shorten_pixel_lines_when_width_is_decreased_when_saving_xpm();
+	void should_add_new_lines_when_height_is_increased_when_saving_xpm();
+	void should_remove_text_constants_when_height_is_decreased_when_saving_xpm();
 };
 
 void PixmapTest::should_construct_color_from_argb()
@@ -210,6 +242,161 @@ void PixmapTest::should_consider_default_color_transparent()
 	Pixmap pixmap(2, 2, 2);
 	pixmap.set_color(0, Pixmap::Color());
 	QVERIFY(pixmap.is_transparent_color(0));
+}
+
+void PixmapTest::should_load_pixmap_from_xpm_file()
+{
+	QFAIL("Not implemented");
+}
+
+void PixmapTest::should_load_pixmap_from_text_lines()
+{
+	QFAIL("Not implemented");
+}
+
+void PixmapTest::should_throw_exception_when_value_line_is_missing_in_xpm()
+{
+	QFAIL("Not implemented");
+}
+
+void PixmapTest::should_throw_exception_when_colour_lines_are_missing_or_not_enough_in_xpm()
+{
+	QFAIL("Not implemented");
+}
+
+void PixmapTest::should_throw_exception_when_pixel_lines_are_missing_or_not_enough_in_xpm()
+{
+	QFAIL("Not implemented");
+}
+
+void PixmapTest::should_throw_exception_when_value_count_is_not_four_in_xpm()
+{
+	QFAIL("Not implemented");
+}
+
+void PixmapTest::should_throw_exception_when_values_are_not_integer_in_xpm()
+{
+	QFAIL("Not implemented");
+}
+
+void PixmapTest::should_throw_exception_when_colours_are_repeated_in_xpm()
+{
+	QFAIL("Not implemented");
+}
+
+void PixmapTest::should_throw_exception_when_there_is_no_space_after_colour_in_xpm()
+{
+	QFAIL("Not implemented");
+}
+
+void PixmapTest::should_throw_exception_when_colour_key_is_not_c_in_xpm()
+{
+	QFAIL("Not implemented");
+}
+
+void PixmapTest::should_throw_exception_when_colour_key_is_missing_in_xpm()
+{
+	QFAIL("Not implemented");
+}
+
+void PixmapTest::should_throw_exception_when_colour_value_is_missing_in_xpm()
+{
+	QFAIL("Not implemented");
+}
+
+void PixmapTest::should_throw_exception_when_colour_value_is_invalid_in_xpm()
+{
+	QFAIL("Not implemented");
+}
+
+void PixmapTest::shoudl_throw_exception_when_pixel_row_length_is_too_small_in_xpm()
+{
+	QFAIL("Not implemented");
+}
+
+void PixmapTest::shoudl_throw_exception_when_pixel_row_length_is_too_large_in_xpm()
+{
+	QFAIL("Not implemented");
+}
+
+void PixmapTest::shoudl_throw_exception_when_pixel_row_count_is_too_small_in_xpm()
+{
+	QFAIL("Not implemented");
+}
+
+void PixmapTest::shoudl_throw_exception_when_pixel_row_count_is_too_large_in_xpm()
+{
+	QFAIL("Not implemented");
+}
+
+void PixmapTest::shoudl_throw_exception_when_pixel_is_broken_in_xpm()
+{
+	QFAIL("Not implemented");
+}
+
+void PixmapTest::shoudl_throw_exception_when_pixel_is_invalid_in_xpm()
+{
+	QFAIL("Not implemented");
+}
+
+void PixmapTest::xpm_should_have_four_values()
+{
+	QFAIL("Not implemented");
+}
+
+void PixmapTest::xpm_should_have_integer_values()
+{
+	QFAIL("Not implemented");
+}
+
+void PixmapTest::xpm_colours_should_be_started_with_cpp_and_space()
+{
+	QFAIL("Not implemented");
+}
+
+void PixmapTest::xpm_colour_key_should_be_only_c()
+{
+	QFAIL("Not implemented");
+}
+
+void PixmapTest::should_save_pixmap_exactly_when_intact()
+{
+	QFAIL("Not implemented");
+}
+
+void PixmapTest::should_keep_format_of_values_when_saving_xpm()
+{
+	QFAIL("Not implemented");
+}
+
+void PixmapTest::should_keep_format_of_colours_when_saving_xpm()
+{
+	QFAIL("Not implemented");
+}
+
+void PixmapTest::should_insert_line_breaks_when_colours_are_added_when_saving_xpm()
+{
+	QFAIL("Not implemented");
+}
+
+void PixmapTest::should_lengthen_pixel_lines_when_width_is_increased_when_saving_xpm()
+{
+	QFAIL("Not implemented");
+}
+
+void PixmapTest::should_shorten_pixel_lines_when_width_is_decreased_when_saving_xpm()
+{
+	QFAIL("Not implemented");
+}
+
+void PixmapTest::should_add_new_lines_when_height_is_increased_when_saving_xpm()
+{
+	QFAIL("Not implemented");
+}
+
+void PixmapTest::should_remove_text_constants_when_height_is_decreased_when_saving_xpm()
+{
+	QFAIL("Not implemented");
 }
 
 QTEST_MAIN(PixmapTest)
