@@ -8,6 +8,7 @@ class PixmapTest : public QObject {
 	Q_OBJECT
 private slots:
 	void should_construct_color_from_argb();
+	void should_construct_color_from_rgb();
 	void should_construct_transparent_color_from_argb_with_zero_alpha();
 	void should_get_transparent_rgba_as_transparent_black();
 	void should_get_rgba_from_opaque_color();
@@ -27,8 +28,8 @@ private slots:
 	void should_consider_transparent_color_transparent();
 	void should_consider_default_color_transparent();
 
-	void should_load_pixmap_from_xpm_file();
 	void should_load_pixmap_from_text_lines();
+	void should_load_pixmap_from_xpm_file();
 	void should_throw_exception_when_value_line_is_missing_in_xpm();
 	void should_throw_exception_when_colour_lines_are_missing_or_not_enough_in_xpm();
 	void should_throw_exception_when_pixel_lines_are_missing_or_not_enough_in_xpm();
@@ -62,6 +63,15 @@ void PixmapTest::should_construct_color_from_argb()
 	QCOMPARE((int)c.r, 0);
 	QCOMPARE((int)c.g, 0);
 	QCOMPARE((int)c.b, 0);
+}
+
+void PixmapTest::should_construct_color_from_rgb()
+{
+	Pixmap::Color c = Pixmap::Color::from_rgb(0x00ff00ff);
+	QVERIFY(!c.transparent);
+	QCOMPARE((int)c.r, 255);
+	QCOMPARE((int)c.g, 0);
+	QCOMPARE((int)c.b, 255);
 }
 
 void PixmapTest::should_construct_transparent_color_from_argb_with_zero_alpha()
@@ -241,18 +251,17 @@ void PixmapTest::should_consider_default_color_transparent()
 	QVERIFY(pixmap.is_transparent_color(0));
 }
 
-void PixmapTest::should_load_pixmap_from_xpm_file()
+void PixmapTest::should_load_pixmap_from_text_lines()
 {
-	static const char * xpm_data = 
-		"static char * xpm[] = {\n"
-		"\"3 2 2 1\",\n"
-		"\". c #ff0000\",\n"
-		"\"# c #00ff00\",\n"
-		"\"#.#\",\n"
-		"\".#.\"\n"
-		"};\n"
-		;
-	Pixmap pixmap(xpm_data);
+	static const char * xpm[] = {
+	"3 2 2 1",
+	". c #ff0000",
+	"# c #00ff00",
+	"#.#",
+	".#."
+	};
+	std::vector<std::string> xpm_lines(xpm, xpm + array_size(xpm));
+	Pixmap pixmap(xpm_lines);
 	QCOMPARE(pixmap.color_count(), 2u);
 	QCOMPARE(pixmap.color(0), Pixmap::Color(255, 0, 0));
 	QCOMPARE(pixmap.color(1), Pixmap::Color(0, 255, 0));
@@ -266,17 +275,18 @@ void PixmapTest::should_load_pixmap_from_xpm_file()
 	QCOMPARE(pixmap.pixel(2, 1), 0u);
 }
 
-void PixmapTest::should_load_pixmap_from_text_lines()
+void PixmapTest::should_load_pixmap_from_xpm_file()
 {
-	static const char * xpm[] = {
-	"3 2 2 1",
-	". c #ff0000",
-	"# c #00ff00",
-	"#.#",
-	".#."
-	};
-	std::vector<std::string> xpm_lines(xpm, xpm + array_size(xpm));
-	Pixmap pixmap(xpm_lines);
+	static const char * xpm_data = 
+		"static char * xpm[] = {\n"
+		"\"3 2 2 1\",\n"
+		"\". c #ff0000\",\n"
+		"\"# c #00ff00\",\n"
+		"\"#.#\",\n"
+		"\".#.\"\n"
+		"};\n"
+		;
+	Pixmap pixmap(xpm_data);
 	QCOMPARE(pixmap.color_count(), 2u);
 	QCOMPARE(pixmap.color(0), Pixmap::Color(255, 0, 0));
 	QCOMPARE(pixmap.color(1), Pixmap::Color(0, 255, 0));
@@ -329,7 +339,7 @@ void PixmapTest::should_throw_exception_when_pixel_lines_are_missing_or_not_enou
 		Pixmap pixmap(xpm_lines);
 		QFAIL("Exception wasn't thrown");
 	} catch(const Pixmap::Exception & e) {
-		QCOMPARE(e.what, std::string("Color lines are missing"));
+		QCOMPARE(e.what, std::string("Pixel rows are missing or not enough"));
 	}
 }
 
@@ -357,7 +367,7 @@ void PixmapTest::should_throw_exception_when_values_are_not_integer_in_xpm()
 		Pixmap pixmap(xpm_lines);
 		QFAIL("Exception wasn't thrown");
 	} catch(const Pixmap::Exception & e) {
-		QCOMPARE(e.what, std::string("Values in value line should be integers."));
+		QCOMPARE(e.what, std::string("Values in value line should be integers and non-zero."));
 	}
 }
 

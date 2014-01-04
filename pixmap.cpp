@@ -29,6 +29,11 @@ Pixmap::Color Pixmap::Color::from_argb(uint32_t color)
 	return Color((color >> 16) & 0xff, (color >> 8) & 0xff, color & 0xff);
 }
 
+Pixmap::Color Pixmap::Color::from_rgb(uint32_t color)
+{
+	return Color((color >> 16) & 0xff, (color >> 8) & 0xff, color & 0xff);
+}
+
 bool Pixmap::Color::operator==(const Color & other) const
 {
 	return (transparent == other.transparent) || (r == other.r && g == other.g && b == other.b);
@@ -193,16 +198,17 @@ std::vector<std::string> Pixmap::load_from_xpm_data(const std::string & xpm_data
 {
 	std::istringstream iss(xpm_data);
 	std::vector<std::string> tokens;
-	std::copy(std::istream_iterator<std::string>(iss),
-			std::istream_iterator<std::string>(),
-			std::back_inserter<std::vector<std::string> >(tokens));
+	std::string token;
+	while(std::getline(iss, token, '\n')) {
+		tokens.push_back(token);
+	}
 	std::vector<std::string> result;
 	for(std::vector<std::string>::const_iterator it = tokens.begin(); it != tokens.end(); ++it) {
 		const std::string & line = *it;
 		size_t first = line.find('"');
 		size_t second = line.find('"', first + 1);
 		while(first != std::string::npos && second != std::string::npos) {
-			result.push_back(line.substr(first, second - first));
+			result.push_back(line.substr(first + 1, second - first - 1));
 
 			first = line.find('"', second + 1);
 			second = line.find('"', first + 1);
@@ -215,6 +221,94 @@ void Pixmap::load_from_xpm_lines(const std::vector<std::string> & xpm_lines)
 {
 	if(xpm_lines.empty()) {
 		throw Exception("Value line is missing");
+	}
+	std::vector<std::string>::const_iterator line = xpm_lines.begin();
+	std::istringstream in(*line);
+	++line;
+	std::vector<std::string> values;
+	std::copy(std::istream_iterator<std::string>(in),
+			std::istream_iterator<std::string>(),
+			std::back_inserter<std::vector<std::string> >(values));
+	if(values.size() != 4) {
+		throw Exception("Value line should be in format '<width> <height> <color_count> <char_per_pixel>'");
+	}
+
+	w = atoi(values[0].c_str());
+	h = atoi(values[1].c_str());
+	unsigned colors = atoi(values[2].c_str());
+	unsigned cpp = atoi(values[3].c_str());
+	if(w == 0 || h == 0 || colors == 0 || cpp == 0) {
+		throw Exception("Values in value line should be integers and non-zero.");
+	}
+
+	std::map<std::string, unsigned> color_names;
+	palette.clear();
+	while(colors --> 0) {
+		if(line == xpm_lines.end()) {
+			throw Exception("Color lines are missing or not enough");
+		}
+		std::string color_name = line->substr(0, cpp);
+		if(line->size() <= cpp || (*line)[cpp] != ' ') {
+			throw Exception("Color char should be followed by space in color table.");
+		}
+		std::istringstream color_in(line->substr(cpp + 1));
+		std::string key;
+		std::string value;
+		color_in >> key;
+		if(!color_in) {
+			throw Exception("Color key is missing.");
+		}
+		if(key != "c") {
+			throw Exception("Only color key 'c' is supported.");
+		}
+		color_in >> value;
+		if(!color_in) {
+			throw Exception("Color value is missing.");
+		}
+		if(color_names.count(color_name) > 0) {
+			throw Exception("Color <" + color_name + "> was found more than once.");
+		}
+		value = value.substr(1);
+		bool is_zero = true;
+		for(std::string::const_iterator it = value.begin(); it != value.end(); ++it) {
+			if(*it != '0') {
+				is_zero = false;
+				break;
+			}
+		}
+		unsigned color_value = strtoul(value.c_str(), 0, 16);
+		if(color_value == 0 && !is_zero) {
+			throw Exception("Color value is invalid.");
+		}
+		Color color = Color::from_rgb(color_value);
+		color_names[color_name] = add_color(color);
+		++line;
+	}
+
+	pixels.clear();
+	unsigned rows = h;
+	while(rows --> 0) {
+		if(line == xpm_lines.end()) {
+			throw Exception("Pixel rows are missing or not enough");
+		}
+		if(line->size() % cpp != 0) {
+			throw Exception("Pixel value in a row is broken.");
+		} else if(line->size() < cpp * w) {
+			throw Exception("Pixel row is too small.");
+		} else if(line->size() > cpp * w) {
+			throw Exception("Pixel row is too large.");
+		}
+		for(unsigned col = 0; col < w; ++col) {
+			std::string pixel = line->substr(col * cpp, cpp);
+			if(color_names.count(pixel) == 0) {
+				throw Exception("Pixel value is invalid.");
+			}
+			pixels.push_back(color_names[pixel]);
+		}
+		++line;
+	}
+	if(line != xpm_lines.end()) {
+		throw Exception("Extra pixel rows are found.");
 	}
 }
 

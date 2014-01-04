@@ -13,6 +13,7 @@ public:
 		uint32_t argb() const;
 		bool operator==(const Color & other) const;
 		static Color from_argb(uint32_t color);
+		static Color from_rgb(uint32_t color);
 	};
 	struct Exception {
 		std::string what;
