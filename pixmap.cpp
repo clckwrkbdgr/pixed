@@ -1,5 +1,7 @@
 #include "pixmap.h"
 #include <QtDebug>
+#include <sstream>
+#include <algorithm>
 
 Pixmap::Color::Color()
 	: transparent(true), r(0), g(0), b(0)
@@ -33,6 +35,19 @@ bool Pixmap::Color::operator==(const Color & other) const
 }
 
 		
+Pixmap::Pixmap(const std::string & xpm_data)
+	: w(1), h(1), pixels(1, 0), palette(1)
+{
+	std::vector<std::string> lines = load_from_xpm_data(xpm_data);
+	load_from_xpm_lines(lines);
+}
+
+Pixmap::Pixmap(const std::vector<std::string> & xpm_lines)
+	: w(1), h(1), pixels(1, 0), palette(1)
+{
+	load_from_xpm_lines(xpm_lines);
+}
+
 Pixmap::Pixmap(unsigned pixmap_width, unsigned pixmap_height, unsigned palette_size)
 	: w(pixmap_width), h(pixmap_height), pixels(w * h, 0), palette(palette_size > 1 ? palette_size : 1, Color(0, 0, 0))
 {
@@ -171,5 +186,35 @@ bool Pixmap::is_transparent_color(unsigned index) const
 		return palette[index].transparent;
 	}
 	return false;
+}
+
+
+std::vector<std::string> Pixmap::load_from_xpm_data(const std::string & xpm_data)
+{
+	std::istringstream iss(xpm_data);
+	std::vector<std::string> tokens;
+	std::copy(std::istream_iterator<std::string>(iss),
+			std::istream_iterator<std::string>(),
+			std::back_inserter<std::vector<std::string> >(tokens));
+	std::vector<std::string> result;
+	for(std::vector<std::string>::const_iterator it = tokens.begin(); it != tokens.end(); ++it) {
+		const std::string & line = *it;
+		size_t first = line.find('"');
+		size_t second = line.find('"', first + 1);
+		while(first != std::string::npos && second != std::string::npos) {
+			result.push_back(line.substr(first, second - first));
+
+			first = line.find('"', second + 1);
+			second = line.find('"', first + 1);
+		}
+	}
+	return result;
+}
+
+void Pixmap::load_from_xpm_lines(const std::vector<std::string> & xpm_lines)
+{
+	if(xpm_lines.empty()) {
+		throw Exception("Value line is missing");
+	}
 }
 

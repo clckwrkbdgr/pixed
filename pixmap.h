@@ -1,6 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include <vector>
+#include <string>
 
 class Pixmap {
 public:
@@ -13,7 +14,13 @@ public:
 		bool operator==(const Color & other) const;
 		static Color from_argb(uint32_t color);
 	};
+	struct Exception {
+		std::string what;
+		Exception(const std::string & reason) : what(reason) {}
+	};
 
+	Pixmap(const std::string & xpm_data);
+	Pixmap(const std::vector<std::string> & xpm_lines);
 	Pixmap(unsigned w, unsigned h, unsigned palette_size = 1);
 	bool valid(unsigned x, unsigned y) const;
 	unsigned width() const;
@@ -34,4 +41,7 @@ private:
 	unsigned w, h;
 	std::vector<unsigned> pixels;
 	std::vector<Color> palette;
+
+	std::vector<std::string> load_from_xpm_data(const std::string & xpm_data);
+	void load_from_xpm_lines(const std::vector<std::string> & xpm_lines);
 };

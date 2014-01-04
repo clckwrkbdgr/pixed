@@ -2,6 +2,8 @@
 #include "pixmap.h"
 #include <QtTest/QtTest>
 
+template <class T, size_t N> size_t array_size(const T (&)[N]) { return N; }
+
 class PixmapTest : public QObject {
 	Q_OBJECT
 private slots:
@@ -40,14 +42,9 @@ private slots:
 	void should_throw_exception_when_colour_value_is_invalid_in_xpm();
 	void shoudl_throw_exception_when_pixel_row_length_is_too_small_in_xpm();
 	void shoudl_throw_exception_when_pixel_row_length_is_too_large_in_xpm();
-	void shoudl_throw_exception_when_pixel_row_count_is_too_small_in_xpm();
 	void shoudl_throw_exception_when_pixel_row_count_is_too_large_in_xpm();
 	void shoudl_throw_exception_when_pixel_is_broken_in_xpm();
 	void shoudl_throw_exception_when_pixel_is_invalid_in_xpm();
-	void xpm_should_have_four_values();
-	void xpm_should_have_integer_values();
-	void xpm_colours_should_be_started_with_cpp_and_space();
-	void xpm_colour_key_should_be_only_c();
 	void should_save_pixmap_exactly_when_intact();
 	void should_keep_format_of_values_when_saving_xpm();
 	void should_keep_format_of_colours_when_saving_xpm();
@@ -246,117 +243,304 @@ void PixmapTest::should_consider_default_color_transparent()
 
 void PixmapTest::should_load_pixmap_from_xpm_file()
 {
-	QFAIL("Not implemented");
+	static const char * xpm_data = 
+		"static char * xpm[] = {\n"
+		"\"3 2 2 1\",\n"
+		"\". c #ff0000\",\n"
+		"\"# c #00ff00\",\n"
+		"\"#.#\",\n"
+		"\".#.\"\n"
+		"};\n"
+		;
+	Pixmap pixmap(xpm_data);
+	QCOMPARE(pixmap.color_count(), 2u);
+	QCOMPARE(pixmap.color(0), Pixmap::Color(255, 0, 0));
+	QCOMPARE(pixmap.color(1), Pixmap::Color(0, 255, 0));
+	QCOMPARE(pixmap.width(), 3u);
+	QCOMPARE(pixmap.height(), 2u);
+	QCOMPARE(pixmap.pixel(0, 0), 1u);
+	QCOMPARE(pixmap.pixel(1, 0), 0u);
+	QCOMPARE(pixmap.pixel(2, 0), 1u);
+	QCOMPARE(pixmap.pixel(0, 1), 0u);
+	QCOMPARE(pixmap.pixel(1, 1), 1u);
+	QCOMPARE(pixmap.pixel(2, 1), 0u);
 }
 
 void PixmapTest::should_load_pixmap_from_text_lines()
 {
-	QFAIL("Not implemented");
+	static const char * xpm[] = {
+	"3 2 2 1",
+	". c #ff0000",
+	"# c #00ff00",
+	"#.#",
+	".#."
+	};
+	std::vector<std::string> xpm_lines(xpm, xpm + array_size(xpm));
+	Pixmap pixmap(xpm_lines);
+	QCOMPARE(pixmap.color_count(), 2u);
+	QCOMPARE(pixmap.color(0), Pixmap::Color(255, 0, 0));
+	QCOMPARE(pixmap.color(1), Pixmap::Color(0, 255, 0));
+	QCOMPARE(pixmap.width(), 3u);
+	QCOMPARE(pixmap.height(), 2u);
+	QCOMPARE(pixmap.pixel(0, 0), 1u);
+	QCOMPARE(pixmap.pixel(1, 0), 0u);
+	QCOMPARE(pixmap.pixel(2, 0), 1u);
+	QCOMPARE(pixmap.pixel(0, 1), 0u);
+	QCOMPARE(pixmap.pixel(1, 1), 1u);
+	QCOMPARE(pixmap.pixel(2, 1), 0u);
 }
 
 void PixmapTest::should_throw_exception_when_value_line_is_missing_in_xpm()
 {
-	QFAIL("Not implemented");
+	std::vector<std::string> xpm_lines;
+	try {
+		Pixmap pixmap(xpm_lines);
+		QFAIL("Exception wasn't thrown");
+	} catch(const Pixmap::Exception & e) {
+		QCOMPARE(e.what, std::string("Value line is missing"));
+	}
 }
 
 void PixmapTest::should_throw_exception_when_colour_lines_are_missing_or_not_enough_in_xpm()
 {
-	QFAIL("Not implemented");
+	static const char * xpm[] = {
+	"3 2 2 1",
+	". c #ff0000"
+	};
+	std::vector<std::string> xpm_lines(xpm, xpm + array_size(xpm));
+	try {
+		Pixmap pixmap(xpm_lines);
+		QFAIL("Exception wasn't thrown");
+	} catch(const Pixmap::Exception & e) {
+		QCOMPARE(e.what, std::string("Color lines are missing or not enough"));
+	}
 }
 
 void PixmapTest::should_throw_exception_when_pixel_lines_are_missing_or_not_enough_in_xpm()
 {
-	QFAIL("Not implemented");
+	static const char * xpm[] = {
+	"3 2 2 1",
+	". c #ff0000",
+	"# c #00ff00",
+	"#.#"
+	};
+	std::vector<std::string> xpm_lines(xpm, xpm + array_size(xpm));
+	try {
+		Pixmap pixmap(xpm_lines);
+		QFAIL("Exception wasn't thrown");
+	} catch(const Pixmap::Exception & e) {
+		QCOMPARE(e.what, std::string("Color lines are missing"));
+	}
 }
 
 void PixmapTest::should_throw_exception_when_value_count_is_not_four_in_xpm()
 {
-	QFAIL("Not implemented");
+	static const char * xpm[] = {
+	"3 2",
+	};
+	std::vector<std::string> xpm_lines(xpm, xpm + array_size(xpm));
+	try {
+		Pixmap pixmap(xpm_lines);
+		QFAIL("Exception wasn't thrown");
+	} catch(const Pixmap::Exception & e) {
+		QCOMPARE(e.what, std::string("Value line should be in format '<width> <height> <color_count> <char_per_pixel>'"));
+	}
 }
 
 void PixmapTest::should_throw_exception_when_values_are_not_integer_in_xpm()
 {
-	QFAIL("Not implemented");
+	static const char * xpm[] = {
+	"3 2 a 1",
+	};
+	std::vector<std::string> xpm_lines(xpm, xpm + array_size(xpm));
+	try {
+		Pixmap pixmap(xpm_lines);
+		QFAIL("Exception wasn't thrown");
+	} catch(const Pixmap::Exception & e) {
+		QCOMPARE(e.what, std::string("Values in value line should be integers."));
+	}
 }
 
 void PixmapTest::should_throw_exception_when_colours_are_repeated_in_xpm()
 {
-	QFAIL("Not implemented");
+	static const char * xpm[] = {
+	"3 2 2 1",
+	". c #ff0000",
+	". c #00ff00",
+	};
+	std::vector<std::string> xpm_lines(xpm, xpm + array_size(xpm));
+	try {
+		Pixmap pixmap(xpm_lines);
+		QFAIL("Exception wasn't thrown");
+	} catch(const Pixmap::Exception & e) {
+		QCOMPARE(e.what, std::string("Color <.> was found more than once."));
+	}
 }
 
 void PixmapTest::should_throw_exception_when_there_is_no_space_after_colour_in_xpm()
 {
-	QFAIL("Not implemented");
+	static const char * xpm[] = {
+	"3 2 2 1",
+	".c #ff0000"
+	};
+	std::vector<std::string> xpm_lines(xpm, xpm + array_size(xpm));
+	try {
+		Pixmap pixmap(xpm_lines);
+		QFAIL("Exception wasn't thrown");
+	} catch(const Pixmap::Exception & e) {
+		QCOMPARE(e.what, std::string("Color char should be followed by space in color table."));
+	}
 }
 
 void PixmapTest::should_throw_exception_when_colour_key_is_not_c_in_xpm()
 {
-	QFAIL("Not implemented");
+	static const char * xpm[] = {
+	"3 2 2 1",
+	". s #ff0000"
+	};
+	std::vector<std::string> xpm_lines(xpm, xpm + array_size(xpm));
+	try {
+		Pixmap pixmap(xpm_lines);
+		QFAIL("Exception wasn't thrown");
+	} catch(const Pixmap::Exception & e) {
+		QCOMPARE(e.what, std::string("Only color key 'c' is supported."));
+	}
 }
 
 void PixmapTest::should_throw_exception_when_colour_key_is_missing_in_xpm()
 {
-	QFAIL("Not implemented");
+	static const char * xpm[] = {
+	"3 2 2 1",
+	". "
+	};
+	std::vector<std::string> xpm_lines(xpm, xpm + array_size(xpm));
+	try {
+		Pixmap pixmap(xpm_lines);
+		QFAIL("Exception wasn't thrown");
+	} catch(const Pixmap::Exception & e) {
+		QCOMPARE(e.what, std::string("Color key is missing."));
+	}
 }
 
 void PixmapTest::should_throw_exception_when_colour_value_is_missing_in_xpm()
 {
-	QFAIL("Not implemented");
+	static const char * xpm[] = {
+	"3 2 2 1",
+	". c"
+	};
+	std::vector<std::string> xpm_lines(xpm, xpm + array_size(xpm));
+	try {
+		Pixmap pixmap(xpm_lines);
+		QFAIL("Exception wasn't thrown");
+	} catch(const Pixmap::Exception & e) {
+		QCOMPARE(e.what, std::string("Color value is missing."));
+	}
 }
 
 void PixmapTest::should_throw_exception_when_colour_value_is_invalid_in_xpm()
 {
-	QFAIL("Not implemented");
+	static const char * xpm[] = {
+	"3 2 2 1",
+	". c invalid"
+	};
+	std::vector<std::string> xpm_lines(xpm, xpm + array_size(xpm));
+	try {
+		Pixmap pixmap(xpm_lines);
+		QFAIL("Exception wasn't thrown");
+	} catch(const Pixmap::Exception & e) {
+		QCOMPARE(e.what, std::string("Color value is invalid."));
+	}
 }
 
 void PixmapTest::shoudl_throw_exception_when_pixel_row_length_is_too_small_in_xpm()
 {
-	QFAIL("Not implemented");
+	static const char * xpm[] = {
+	"3 2 2 1",
+	". c #ff0000",
+	"# c #00ff00",
+	"#.",
+	".#"
+	};
+	std::vector<std::string> xpm_lines(xpm, xpm + array_size(xpm));
+	try {
+		Pixmap pixmap(xpm_lines);
+		QFAIL("Exception wasn't thrown");
+	} catch(const Pixmap::Exception & e) {
+		QCOMPARE(e.what, std::string("Pixel row is too small."));
+	}
 }
 
 void PixmapTest::shoudl_throw_exception_when_pixel_row_length_is_too_large_in_xpm()
 {
-	QFAIL("Not implemented");
-}
-
-void PixmapTest::shoudl_throw_exception_when_pixel_row_count_is_too_small_in_xpm()
-{
-	QFAIL("Not implemented");
+	static const char * xpm[] = {
+	"3 2 2 1",
+	". c #ff0000",
+	"# c #00ff00",
+	"#.##",
+	".#"
+	};
+	std::vector<std::string> xpm_lines(xpm, xpm + array_size(xpm));
+	try {
+		Pixmap pixmap(xpm_lines);
+		QFAIL("Exception wasn't thrown");
+	} catch(const Pixmap::Exception & e) {
+		QCOMPARE(e.what, std::string("Pixel row is too large."));
+	}
 }
 
 void PixmapTest::shoudl_throw_exception_when_pixel_row_count_is_too_large_in_xpm()
 {
-	QFAIL("Not implemented");
+	static const char * xpm[] = {
+	"3 2 2 1",
+	". c #ff0000",
+	"# c #00ff00",
+	"#.#",
+	"#.#",
+	".##"
+	};
+	std::vector<std::string> xpm_lines(xpm, xpm + array_size(xpm));
+	try {
+		Pixmap pixmap(xpm_lines);
+		QFAIL("Exception wasn't thrown");
+	} catch(const Pixmap::Exception & e) {
+		QCOMPARE(e.what, std::string("Extra pixel rows are found."));
+	}
 }
 
 void PixmapTest::shoudl_throw_exception_when_pixel_is_broken_in_xpm()
 {
-	QFAIL("Not implemented");
+	static const char * xpm[] = {
+	"3 2 2 2",
+	"a. c #ff0000",
+	"b# c #00ff00",
+	"b#a.b#",
+	"a.b#a"
+	};
+	std::vector<std::string> xpm_lines(xpm, xpm + array_size(xpm));
+	try {
+		Pixmap pixmap(xpm_lines);
+		QFAIL("Exception wasn't thrown");
+	} catch(const Pixmap::Exception & e) {
+		QCOMPARE(e.what, std::string("Pixel value in a row is broken."));
+	}
 }
 
 void PixmapTest::shoudl_throw_exception_when_pixel_is_invalid_in_xpm()
 {
-	QFAIL("Not implemented");
-}
-
-void PixmapTest::xpm_should_have_four_values()
-{
-	QFAIL("Not implemented");
-}
-
-void PixmapTest::xpm_should_have_integer_values()
-{
-	QFAIL("Not implemented");
-}
-
-void PixmapTest::xpm_colours_should_be_started_with_cpp_and_space()
-{
-	QFAIL("Not implemented");
-}
-
-void PixmapTest::xpm_colour_key_should_be_only_c()
-{
-	QFAIL("Not implemented");
+	static const char * xpm[] = {
+	"3 2 2 2",
+	"a. c #ff0000",
+	"b# c #00ff00",
+	"b#a.b#",
+	"a.b#a$"
+	};
+	std::vector<std::string> xpm_lines(xpm, xpm + array_size(xpm));
+	try {
+		Pixmap pixmap(xpm_lines);
+		QFAIL("Exception wasn't thrown");
+	} catch(const Pixmap::Exception & e) {
+		QCOMPARE(e.what, std::string("Pixel value is invalid."));
+	}
 }
 
 void PixmapTest::should_save_pixmap_exactly_when_intact()
