@@ -312,3 +312,7 @@ void Pixmap::load_from_xpm_lines(const std::vector<std::string> & xpm_lines)
 	}
 }
 
+std::string Pixmap::save() const
+{
+	return "";
+}

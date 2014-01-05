@@ -38,6 +38,8 @@ public:
 	bool is_transparent_color(unsigned index) const;
 	unsigned add_color(Color new_color);
 	bool set_color(unsigned index, Color new_color);
+
+	std::string save() const;
 private:
 	unsigned w, h;
 	std::vector<unsigned> pixels;

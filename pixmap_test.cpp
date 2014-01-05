@@ -555,42 +555,201 @@ void PixmapTest::shoudl_throw_exception_when_pixel_is_invalid_in_xpm()
 
 void PixmapTest::should_save_pixmap_exactly_when_intact()
 {
-	QFAIL("Not implemented");
+	static const char * xpm_data = 
+		"/* XPM */\n"
+		"static char * xpm[] = {\n"
+		"/* Values */\n"
+		"\"3 2 2 1\",\n"
+		"/* Colors */\n"
+		"\". c #ff0000\" /* red */,\n"
+		"\"# c #00ff00\",\n"
+		"/* Pixels */\n"
+		"\"#.#\",\n"
+		"\".#.\"\n"
+		"};\n"
+		;
+	Pixmap pixmap(xpm_data);
+	std::string save_data = pixmap.save();
+	QCOMPARE(save_data, std::string(xpm_data));
 }
 
 void PixmapTest::should_keep_format_of_values_when_saving_xpm()
 {
-	QFAIL("Not implemented");
+	static const char * xpm_data = 
+		"static char * xpm[] = {\n"
+		"\" 3    2 2  1 \",\n"
+		"\". c #ff0000\",\n"
+		"\"# c #00ff00\",\n"
+		"\"#.#\",\n"
+		"\".#.\"\n"
+		"};\n"
+		;
+	static const char * xpm_result = 
+		"static char * xpm[] = {\n"
+		"\" 3    3 2  1 \",\n"
+		"\". c #ff0000\",\n"
+		"\"# c #00ff00\",\n"
+		"\"#.#\",\n"
+		"\".#.\",\n"
+		"\"...\"\n"
+		"};\n"
+		;
+	Pixmap pixmap(xpm_data);
+	pixmap.resize(3, 3);
+	std::string save_data = pixmap.save();
+	QCOMPARE(save_data, std::string(xpm_result));
 }
 
 void PixmapTest::should_keep_format_of_colours_when_saving_xpm()
 {
-	QFAIL("Not implemented");
+	static const char * xpm_data = 
+		"static char * xpm[] = {\n"
+		"\"3 2 2 1\",\n"
+		"\".   c  #ff0000\",\n"
+		"\"# c #00ff00   \",\n"
+		"\"#.#\",\n"
+		"\".#.\"\n"
+		"};\n"
+		;
+	static const char * xpm_result = 
+		"static char * xpm[] = {\n"
+		"\"3 2 2 1\",\n"
+		"\".   c  #000000\",\n"
+		"\"# c #ffffff   \",\n"
+		"\"#.#\",\n"
+		"\".#.\"\n"
+		"};\n"
+		;
+	Pixmap pixmap(xpm_data);
+	pixmap.set_color(0, Pixmap::Color(0, 0, 0));
+	pixmap.set_color(1, Pixmap::Color(255, 255, 255));
+	std::string save_data = pixmap.save();
+	QCOMPARE(save_data, std::string(xpm_result));
 }
 
 void PixmapTest::should_insert_line_breaks_when_colours_are_added_when_saving_xpm()
 {
-	QFAIL("Not implemented");
+	static const char * xpm_data = 
+		"static char * xpm[] = {\n"
+		"\"3 2 2 1\",\n"
+		"\". c #ff0000\",\n"
+		"\"# c #00ff00\", \"#.#\",\n"
+		"\".#.\"\n"
+		"};\n"
+		;
+	static const char * xpm_result = 
+		"static char * xpm[] = {\n"
+		"\"3 2 2 1\",\n"
+		"\". c #ff0000\",\n"
+		"\"# c #00ff00\",\n"
+		"\"a c #0000ff\",\"#.#\",\n"
+		"\".#.\"\n"
+		"};\n"
+		;
+	Pixmap pixmap(xpm_data);
+	pixmap.add_color(Pixmap::Color(0, 0, 255));
+	std::string save_data = pixmap.save();
+	QCOMPARE(save_data, std::string(xpm_result));
 }
 
 void PixmapTest::should_lengthen_pixel_lines_when_width_is_increased_when_saving_xpm()
 {
-	QFAIL("Not implemented");
+	static const char * xpm_data = 
+		"static char * xpm[] = {\n"
+		"\"3 3 2 1\",\n"
+		"\". c #ff0000\",\n"
+		"\"# c #00ff00\",\n"
+		"\"#.#\",\"...\",\n"
+		"\".#.\"\n"
+		"};\n"
+		;
+	static const char * xpm_result = 
+		"static char * xpm[] = {\n"
+		"\"4 3 2 1\",\n"
+		"\". c #ff0000\",\n"
+		"\"# c #00ff00\",\n"
+		"\"#.#.\",\"....\",\n"
+		"\".#..\"\n"
+		"};\n"
+		;
+	Pixmap pixmap(xpm_data);
+	pixmap.resize(3, 4);
+	std::string save_data = pixmap.save();
+	QCOMPARE(save_data, std::string(xpm_result));
 }
 
 void PixmapTest::should_shorten_pixel_lines_when_width_is_decreased_when_saving_xpm()
 {
-	QFAIL("Not implemented");
+	static const char * xpm_data = 
+		"static char * xpm[] = {\n"
+		"\"3 3 2 1\",\n"
+		"\". c #ff0000\",\n"
+		"\"# c #00ff00\",\n"
+		"\"#.#\",\"...\",\n"
+		"\".#.\"\n"
+		"};\n"
+		;
+	static const char * xpm_result = 
+		"static char * xpm[] = {\n"
+		"\"2 3 2 1\",\n"
+		"\". c #ff0000\",\n"
+		"\"# c #00ff00\",\n"
+		"\"#.\",\"..\",\n"
+		"\".#\"\n"
+		"};\n"
+		;
+	Pixmap pixmap(xpm_data);
+	pixmap.resize(3, 2);
+	std::string save_data = pixmap.save();
+	QCOMPARE(save_data, std::string(xpm_result));
 }
 
 void PixmapTest::should_add_new_lines_when_height_is_increased_when_saving_xpm()
 {
-	QFAIL("Not implemented");
+	static const char * xpm_data = 
+		"static char * xpm[] = {\n"
+		"\"3 2 2 1\",\n"
+		"\". c #ff0000\",\n"
+		"\"# c #00ff00\",\n"
+		"\"#.#\",\n"
+		"\".#.\"};\n"
+		;
+	static const char * xpm_result = 
+		"static char * xpm[] = {\n"
+		"\"3 3 2 1\",\n"
+		"\". c #ff0000\",\n"
+		"\"# c #00ff00\",\n"
+		"\"#.#\",\n"
+		"\".#.\",\n"
+		"\"...\"};\n"
+		;
+	Pixmap pixmap(xpm_data);
+	pixmap.resize(3, 3);
+	std::string save_data = pixmap.save();
+	QCOMPARE(save_data, std::string(xpm_result));
 }
 
 void PixmapTest::should_remove_text_constants_when_height_is_decreased_when_saving_xpm()
 {
-	QFAIL("Not implemented");
+	static const char * xpm_data = 
+		"static char * xpm[] = {\n"
+		"\"3 2 2 1\",\n"
+		"\". c #ff0000\",\n"
+		"\"# c #00ff00\",\n"
+		"\"#.#\",\n"
+		"\".#.\"};\n"
+		;
+	static const char * xpm_result = 
+		"static char * xpm[] = {\n"
+		"\"3 1 2 1\",\n"
+		"\". c #ff0000\",\n"
+		"\"# c #00ff00\",\n"
+		"\"#.#\"};\n"
+		;
+	Pixmap pixmap(xpm_data);
+	pixmap.resize(3, 1);
+	std::string save_data = pixmap.save();
+	QCOMPARE(save_data, std::string(xpm_result));
 }
 
 QTEST_MAIN(PixmapTest)
