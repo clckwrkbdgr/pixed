@@ -2,6 +2,17 @@
 #include <stdint.h>
 #include <vector>
 #include <string>
+#include <memory>
+
+struct XPMData {
+	unsigned color_count;
+	unsigned row_count;
+	std::vector<std::string> interspaces;
+	std::vector<std::string> colors;
+	std::vector<std::string> values_interspaces;
+	std::vector<std::pair<std::string, std::pair<std::string, std::string> > > colors_interspaces;
+	XPMData();
+};
 
 class Pixmap {
 public:
@@ -24,6 +35,7 @@ public:
 	Pixmap(const std::vector<std::string> & xpm_lines);
 	Pixmap(unsigned w, unsigned h, unsigned palette_size = 1);
 	bool valid(unsigned x, unsigned y) const;
+	bool valid_color_index(unsigned color_index) const;
 	unsigned width() const;
 	unsigned height() const;
 	unsigned pixel(unsigned x, unsigned y) const;
@@ -45,12 +57,8 @@ private:
 	std::vector<unsigned> pixels;
 	std::vector<Color> palette;
 
+	std::auto_ptr<XPMData> xpm;
+
 	void load_from_xpm_data(const std::string & xpm_data);
 	void load_from_xpm_lines(const std::vector<std::string> & xpm_lines);
-	unsigned xpm_color_count;
-	unsigned xpm_row_count;
-	std::vector<std::string> xpm_interspaces;
-	std::vector<std::string> xpm_colors;
-	std::vector<std::string> xpm_values_interspaces;
-	std::vector<std::pair<std::string, std::pair<std::string, std::string> > > xpm_colors_interspaces;
 };
