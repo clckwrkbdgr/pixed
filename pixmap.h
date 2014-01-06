@@ -45,6 +45,12 @@ private:
 	std::vector<unsigned> pixels;
 	std::vector<Color> palette;
 
-	std::vector<std::string> load_from_xpm_data(const std::string & xpm_data);
+	void load_from_xpm_data(const std::string & xpm_data);
 	void load_from_xpm_lines(const std::vector<std::string> & xpm_lines);
+	unsigned xpm_color_count;
+	unsigned xpm_row_count;
+	std::vector<std::string> xpm_interspaces;
+	std::vector<std::string> xpm_colors;
+	std::vector<std::string> xpm_values_interspaces;
+	std::vector<std::pair<std::string, std::pair<std::string, std::string> > > xpm_colors_interspaces;
 };

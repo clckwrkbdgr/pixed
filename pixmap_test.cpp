@@ -639,10 +639,10 @@ void PixmapTest::should_insert_line_breaks_when_colours_are_added_when_saving_xp
 		;
 	static const char * xpm_result = 
 		"static char * xpm[] = {\n"
-		"\"3 2 2 1\",\n"
+		"\"3 2 3 1\",\n"
 		"\". c #ff0000\",\n"
 		"\"# c #00ff00\",\n"
-		"\"a c #0000ff\",\"#.#\",\n"
+		"\"a c #0000ff\", \"#.#\",\n"
 		"\".#.\"\n"
 		"};\n"
 		;
@@ -673,7 +673,7 @@ void PixmapTest::should_lengthen_pixel_lines_when_width_is_increased_when_saving
 		"};\n"
 		;
 	Pixmap pixmap(xpm_data);
-	pixmap.resize(3, 4);
+	pixmap.resize(4, 3);
 	std::string save_data = pixmap.save();
 	QCOMPARE(save_data, std::string(xpm_result));
 }
@@ -699,7 +699,7 @@ void PixmapTest::should_shorten_pixel_lines_when_width_is_decreased_when_saving_
 		"};\n"
 		;
 	Pixmap pixmap(xpm_data);
-	pixmap.resize(3, 2);
+	pixmap.resize(2, 3);
 	std::string save_data = pixmap.save();
 	QCOMPARE(save_data, std::string(xpm_result));
 }
