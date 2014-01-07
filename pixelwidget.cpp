@@ -108,12 +108,14 @@ void PixelWidget::keyPressEvent(QKeyEvent * event)
 	}
 	oldCursor = cursor;
 	if(!shift.isNull()) {
+		int speed = 1;
+		if(event->modifiers().testFlag(Qt::ControlModifier)) {
+			speed = 10;
+		}
 		if(event->modifiers().testFlag(Qt::ShiftModifier)) {
-			shiftCanvas(shift);
-		} else if(event->modifiers().testFlag(Qt::ControlModifier)) {
-			shiftCursor(shift, 10);
+			shiftCanvas(shift, speed);
 		} else {
-			shiftCursor(shift);
+			shiftCursor(shift, speed);
 		}
 	}
 }
@@ -206,9 +208,9 @@ void PixelWidget::takeColorUnderCursor()
 	update();
 }
 
-void PixelWidget::shiftCanvas(const QPoint & shift)
+void PixelWidget::shiftCanvas(const QPoint & shift, int speed)
 {
-	canvasShift += shift;
+	canvasShift += shift * speed;
 	update();
 }
 

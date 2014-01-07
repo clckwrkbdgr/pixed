@@ -29,7 +29,7 @@ private:
 	void floodFill();
 	void zoomIn();
 	void zoomOut();
-	void shiftCanvas(const QPoint & shift);
+	void shiftCanvas(const QPoint & shift, int speed = 1);
 	void centerCanvas();
 	void shiftCursor(const QPoint & shift, int speed = 1);
 	void putColorAtCursor();
