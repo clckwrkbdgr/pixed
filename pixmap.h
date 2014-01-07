@@ -57,7 +57,7 @@ private:
 	std::vector<unsigned> pixels;
 	std::vector<Color> palette;
 
-	std::auto_ptr<XPMData> xpm;
+	XPMData xpm;
 
 	void load_from_xpm_data(const std::string & xpm_data);
 	void load_from_xpm_lines(const std::vector<std::string> & xpm_lines);

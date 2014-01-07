@@ -216,13 +216,13 @@ void Pixmap::load_from_xpm_data(const std::string & xpm_data)
 {
 	std::vector<std::string> lines;
 
-	xpm.reset(new XPMData());
+	xpm = XPMData();
 
 	size_t interspace_start = 0;
 	size_t line_start = xpm_data.find('"');
 	size_t line_stop = xpm_data.find('"', line_start + 1);
 	while(line_start != std::string::npos && line_stop != std::string::npos) {
-		xpm->interspaces.push_back(xpm_data.substr(interspace_start, line_start - interspace_start));
+		xpm.interspaces.push_back(xpm_data.substr(interspace_start, line_start - interspace_start));
 		interspace_start = line_stop + 1;
 
 		lines.push_back(xpm_data.substr(line_start + 1, line_stop - line_start - 1));
@@ -230,32 +230,28 @@ void Pixmap::load_from_xpm_data(const std::string & xpm_data)
 		line_start = xpm_data.find('"', line_stop + 1);
 		line_stop = xpm_data.find('"', line_start + 1);
 	}
-	xpm->interspaces.push_back(xpm_data.substr(interspace_start));
+	xpm.interspaces.push_back(xpm_data.substr(interspace_start));
 
 	load_from_xpm_lines(lines);
 }
 
 void Pixmap::load_from_xpm_lines(const std::vector<std::string> & xpm_lines)
 {
-	if(!xpm.get()) {
-		xpm.reset(new XPMData());
-	}
-
 	if(xpm_lines.empty()) {
 		throw Exception("Value line is missing");
 	}
 	std::vector<std::string>::const_iterator line = xpm_lines.begin();
 	std::vector<std::string> values;
-	xpm->values_interspaces.clear();
-	xpm->values_interspaces.push_back("");
+	xpm.values_interspaces.clear();
+	xpm.values_interspaces.push_back("");
 	bool last_was_space = true;
 	for(unsigned i = 0; i < line->size(); ++i) {
 		const char & ch = (*line)[i];
 		if(ch == ' ') {
 			if(!last_was_space) {
-				xpm->values_interspaces.push_back("");
+				xpm.values_interspaces.push_back("");
 			}
-			xpm->values_interspaces.back() += ch;
+			xpm.values_interspaces.back() += ch;
 			last_was_space = true;
 		} else {
 			if(last_was_space) {
@@ -278,7 +274,7 @@ void Pixmap::load_from_xpm_lines(const std::vector<std::string> & xpm_lines)
 		throw Exception("Values in value line should be integers and non-zero.");
 	}
 
-	xpm->color_count = 0;
+	xpm.color_count = 0;
 	std::map<std::string, unsigned> color_names;
 	palette.clear();
 	while(colors --> 0) {
@@ -325,7 +321,7 @@ void Pixmap::load_from_xpm_lines(const std::vector<std::string> & xpm_lines)
 		if(color_interspaces.size() > 2) {
 			result_pair.second.second = color_interspaces[2];
 		}
-		xpm->colors_interspaces.push_back(result_pair);
+		xpm.colors_interspaces.push_back(result_pair);
 		if(key != "c") {
 			throw Exception("Only color key 'c' is supported.");
 		}
@@ -346,12 +342,12 @@ void Pixmap::load_from_xpm_lines(const std::vector<std::string> & xpm_lines)
 		}
 		Color color = Color::from_rgb(color_value);
 		color_names[color_name] = add_color(color);
-		xpm->colors.push_back(color_name);
-		++xpm->color_count;
+		xpm.colors.push_back(color_name);
+		++xpm.color_count;
 		++line;
 	}
 
-	xpm->row_count = 0;
+	xpm.row_count = 0;
 	pixels.clear();
 	unsigned rows = h;
 	while(rows --> 0) {
@@ -372,7 +368,7 @@ void Pixmap::load_from_xpm_lines(const std::vector<std::string> & xpm_lines)
 			}
 			pixels.push_back(color_names[pixel]);
 		}
-		++xpm->row_count;
+		++xpm.row_count;
 		++line;
 	}
 	if(line != xpm_lines.end()) {
@@ -383,40 +379,37 @@ void Pixmap::load_from_xpm_lines(const std::vector<std::string> & xpm_lines)
 std::string Pixmap::save() const
 {
 	std::string result;
-	if(!xpm.get()) {
-		return result;
-	}
-	std::vector<std::string>::const_iterator interspace = xpm->interspaces.begin();
-	if(interspace == xpm->interspaces.end()) {
+	std::vector<std::string>::const_iterator interspace = xpm.interspaces.begin();
+	if(interspace == xpm.interspaces.end()) {
 		return result;
 	}
 	result += *interspace;
 
 	std::ostringstream values;
 	values << '"';
-	values << xpm->values_interspaces[0] << w;
-	values << xpm->values_interspaces[1] << h;
-	values << xpm->values_interspaces[2] << color_count();
-	values << xpm->values_interspaces[3] << 1;
-	if(xpm->values_interspaces.size() >= 5) {
-		values << xpm->values_interspaces[4];
+	values << xpm.values_interspaces[0] << w;
+	values << xpm.values_interspaces[1] << h;
+	values << xpm.values_interspaces[2] << color_count();
+	values << xpm.values_interspaces[3] << 1;
+	if(xpm.values_interspaces.size() >= 5) {
+		values << xpm.values_interspaces[4];
 	}
 	values << '"';
 	result += values.str();
 
 	++interspace;
-	if(interspace == xpm->interspaces.end()) {
+	if(interspace == xpm.interspaces.end()) {
 		return result;
 	}
 	result += *interspace;
 
-	std::vector<std::string>::const_iterator it_color_key = xpm->colors.begin();
-	std::vector<std::pair<std::string, std::pair<std::string, std::string> > >::const_iterator it_color_interspace = xpm->colors_interspaces.begin();
+	std::vector<std::string>::const_iterator it_color_key = xpm.colors.begin();
+	std::vector<std::pair<std::string, std::pair<std::string, std::string> > >::const_iterator it_color_interspace = xpm.colors_interspaces.begin();
 	char free_color_key = 'a';
 	unsigned current_color = 0;
 	for(std::vector<Color>::const_iterator color = palette.begin(); color != palette.end(); ++color) {
 		std::string color_key;
-		if(it_color_key != xpm->colors.end()) {
+		if(it_color_key != xpm.colors.end()) {
 			color_key = *it_color_key;
 			++it_color_key;
 		} else {
@@ -425,7 +418,7 @@ std::string Pixmap::save() const
 		}
 
 		std::pair<std::string, std::pair<std::string, std::string> > color_interspace;
-		if(it_color_interspace != xpm->colors_interspaces.end()) {
+		if(it_color_interspace != xpm.colors_interspaces.end()) {
 			color_interspace = *it_color_interspace;
 			++it_color_interspace;
 		} else {
@@ -436,10 +429,10 @@ std::string Pixmap::save() const
 		color_value << std::hex << std::setw(6) << std::setfill('0') << (color->argb() & 0xffffff);
 		result += std::string("\"") + color_key + color_interspace.first + "c" + color_interspace.second.first + "#" + color_value.str() + color_interspace.second.second + '"';
 
-		bool print_original_interspace = (current_color < xpm->color_count - 1) || (current_color == color_count() - 1);
+		bool print_original_interspace = (current_color < xpm.color_count - 1) || (current_color == color_count() - 1);
 		if(print_original_interspace) {
 			++interspace;
-			if(interspace == xpm->interspaces.end()) {
+			if(interspace == xpm.interspaces.end()) {
 				return result;
 			}
 			result += *interspace;
@@ -455,24 +448,24 @@ std::string Pixmap::save() const
 		if(row_size == 0) {
 			result += '"';
 		}
-		if(*pixel > xpm->colors.size()) {
+		if(*pixel > xpm.colors.size()) {
 			return result;
 		}
-		result += xpm->colors[*pixel];
+		result += xpm.colors[*pixel];
 		++row_size;
 		if(row_size >= w) {
 			result += '"';
 			bool is_last_one = current_row == h - 1;
-			bool print_original_interspace = (current_row < xpm->row_count - 1) || (current_row == h - 1);
+			bool print_original_interspace = (current_row < xpm.row_count - 1) || (current_row == h - 1);
 			if(is_last_one) {
 				std::string last_interspace;
-				while(interspace != xpm->interspaces.end()) {
+				while(interspace != xpm.interspaces.end()) {
 					last_interspace = *interspace++;
 				}
 				result += last_interspace;
 			} else if(print_original_interspace) {
 				++interspace;
-				if(interspace == xpm->interspaces.end()) {
+				if(interspace == xpm.interspaces.end()) {
 					return result;
 				}
 				result += *interspace;

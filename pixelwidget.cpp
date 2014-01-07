@@ -1,6 +1,7 @@
 #include <QtDebug>
 #include <QtCore/QFile>
 #include <QtCore/QTextStream>
+#include <QtCore/QCoreApplication>
 #include <QtGui/QPainter>
 #include <QtGui/QKeyEvent>
 #include "pixelwidget.h"
@@ -12,26 +13,17 @@ PixelWidget::PixelWidget(const QString & imageFileName, const QSize & newSize, Q
 {
 	setAttribute(Qt::WA_NoSystemBackground, true);
 	if(QFile::exists(fileName) && newSize.isNull()) {
-		QImage image(fileName);
-		canvas = Pixmap(image.width(), image.height());
-		QList<QColor> palette;
-		bool first = true;
-		for(int x = 0; x < image.width(); ++x) {
-			for(int y = 0; y < image.height(); ++y) {
-				unsigned index = 0;
-				QColor c = QColor::fromRgba(image.pixel(x, y));
-				Pixmap::Color pc = (c.alpha() == 0) ? Pixmap::Color() : Pixmap::Color(c.red(), c.green(), c.blue());
-				if(first) {
-					first = false;
-					palette << c;
-					canvas.set_color(0, pc);
-				} else if(palette.contains(c)) {
-					index = palette.indexOf(c);
-				} else {
-					index = canvas.add_color(pc);
-					palette << c;
-				}
-				canvas.set_pixel(x, y, index);
+		QFile file(fileName);
+		QString data;
+		if(file.open(QFile::ReadOnly)) {
+			QTextStream in(&file);
+			data = in.readAll();
+			try {
+				canvas = Pixmap(data.toStdString());
+			} catch(const Pixmap::Exception & e) {
+				QTextStream err(stderr);
+				err << QString::fromStdString(e.what) << endl;
+				exit(1);
 			}
 		}
 	} else {
@@ -50,13 +42,12 @@ PixelWidget::~PixelWidget()
 
 void PixelWidget::save()
 {
-	QImage image(canvas.width(), canvas.height(), QImage::Format_ARGB32);
-	for(unsigned x = 0; x < canvas.width(); ++x) {
-		for(unsigned y = 0; y < canvas.height(); ++y) {
-			image.setPixel(x, y, canvas.color(canvas.pixel(x, y)).argb());
-		}
+	QFile file(fileName);
+	if(file.open(QFile::WriteOnly)) {
+		QString data = QString::fromStdString(canvas.save());
+		QTextStream out(&file);
+		out << data;
 	}
-	image.save(fileName);
 }
 
 void PixelWidget::keyPressEvent(QKeyEvent * event)
