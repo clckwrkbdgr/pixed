@@ -16,11 +16,12 @@ bool Options::printUsage()
 {
 	static const QString usage = QObject::tr(
 			"Simple pixel graphic editor.\n"
-			"Usage: pixed [-w WIDTH -h HEIGHT] FILENAME\n"
+			"Usage: pixed [-w WIDTH -h HEIGHT] FILENAME.xpm\n"
 			"\t-w: set width for new image.\n"
 			"\t-h: set height for new image.\n"
 			"When width and height are specified, file is created anew.\n"
 			"When no width and height are supplied, file is loaded.\n"
+			"Only XPM images are recognized.\n"
 			);
 	QTextStream out(stdout);
 	out << usage;
@@ -56,6 +57,9 @@ bool Options::parse()
 		return printUsage();
 	}
 	filename = getopt.getNonArgs().first();
+	if(!filename.toLower().endsWith(".xpm")) {
+		return printUsage();
+	}
 	return true;
 }
 

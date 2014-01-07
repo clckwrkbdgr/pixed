@@ -5,10 +5,9 @@ Simple pixel editor
 
 Usage
 -----
-	pixed [-w WIDTH -h HEIGHT] FILE
+	pixed [-w WIDTH -h HEIGHT] FILE.xpm
 
-FILE must be of one of the image formats Qt is supporting.
-By default, Qt can read and write following formats: BMP, JPG, JPEG, PNG, PPM, TIFF, XBM, XPM.
+FILE must be of of XPM format (XPM v1).
 If FILE does not exist yet, it will be created upon start of the editor as 32x32 TrueColor image.
 FILE will be saved upon exiting.
 WIDTH and HEIGHT must be greater than zero and must be present together. When width and height are supplied, image is created anew.
