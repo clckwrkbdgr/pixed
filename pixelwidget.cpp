@@ -19,8 +19,8 @@ PixelWidget::PixelWidget(const QString & imageFileName, const QSize & newSize, Q
 			QTextStream in(&file);
 			data = in.readAll();
 			try {
-				canvas = Pixmap(data.toStdString());
-			} catch(const Pixmap::Exception & e) {
+				canvas = Chthon::Pixmap(data.toStdString());
+			} catch(const Chthon::Pixmap::Exception & e) {
 				QTextStream err(stderr);
 				err << QString::fromStdString(e.what) << endl;
 				exit(1);
@@ -28,7 +28,7 @@ PixelWidget::PixelWidget(const QString & imageFileName, const QSize & newSize, Q
 		}
 	} else {
 		if(!newSize.isNull()) {
-			canvas = Pixmap(newSize.width(), newSize.height());
+			canvas = Chthon::Pixmap(newSize.width(), newSize.height());
 		}
 	}
 	color = 0;
@@ -177,16 +177,16 @@ void PixelWidget::endColorInput()
 	if(colorEntered.startsWith('#')) {
 		colorEntered.remove(0, 1);
 	}
-	Pixmap::Color value;
+	Chthon::Pixmap::Color value;
 	if(colorEntered == "-") {
-		value = Pixmap::Color();
+		value = Chthon::Pixmap::Color();
 	} else if(colorEntered.size() % 2 == 0) {
 		if(colorEntered.length() == 6) {
 			bool ok = false;
 			int red = colorEntered.mid(2, 2).toInt(&ok, 16);
 			int green = colorEntered.mid(4, 2).toInt(&ok, 16);
 			int blue = colorEntered.mid(6, 2).toInt(&ok, 16);
-			value = Pixmap::Color(red, green, blue);
+			value = Chthon::Pixmap::Color(red, green, blue);
 		}
 	}
 	canvas.set_color(color, value);
@@ -260,7 +260,7 @@ uint PixelWidget::indexAtPos(const QPoint & pos)
 	return canvas.pixel(pos.x(), pos.y());
 }
 
-Pixmap::Color PixelWidget::indexToRealColor(uint index)
+Chthon::Pixmap::Color PixelWidget::indexToRealColor(uint index)
 {
 	return canvas.color(index);
 }
@@ -309,7 +309,7 @@ void drawGrid(QPainter * painter, const QSize & imageSize, const QPoint & topLef
 	painter->drawLines(black_lines);
 }
 
-QString colorToString(const Pixmap::Color & color)
+QString colorToString(const Chthon::Pixmap::Color & color)
 {
 	if(color.transparent) {
 		return "None";

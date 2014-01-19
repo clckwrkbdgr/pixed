@@ -1,5 +1,5 @@
 #pragma once
-#include "pixmap.h"
+#include <chthon/pixmap.h>
 #include <QtGui/QWidget>
 
 class PixelWidget : public QWidget {
@@ -17,14 +17,14 @@ private:
 	QPoint cursor, oldCursor;
 	uint color;
 	QString fileName;
-	Pixmap canvas;
+	Chthon::Pixmap canvas;
 	bool colorInputMode;
 	QString colorEntered;
 	bool wholeScreenChanged;
 	bool do_draw_grid;
 
 	void switch_draw_grid();
-	Pixmap::Color indexToRealColor(uint index);
+	Chthon::Pixmap::Color indexToRealColor(uint index);
 	uint indexAtPos(const QPoint & pos);
 	void floodFill();
 	void zoomIn();
