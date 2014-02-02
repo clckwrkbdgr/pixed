@@ -184,9 +184,9 @@ void PixelWidget::endColorInput()
 	} else if(colorEntered.size() % 2 == 0) {
 		if(colorEntered.length() == 6) {
 			bool ok = false;
-			int red = colorEntered.mid(2, 2).toInt(&ok, 16);
-			int green = colorEntered.mid(4, 2).toInt(&ok, 16);
-			int blue = colorEntered.mid(6, 2).toInt(&ok, 16);
+			int red = colorEntered.mid(0, 2).toInt(&ok, 16);
+			int green = colorEntered.mid(2, 2).toInt(&ok, 16);
+			int blue = colorEntered.mid(4, 2).toInt(&ok, 16);
 			value = Chthon::Pixmap::Color(red, green, blue);
 		}
 	}
