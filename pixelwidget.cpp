@@ -92,6 +92,7 @@ void PixelWidget::keyPressEvent(QKeyEvent * event)
 		case Qt::Key_B: shift = QPoint(-1, 1); break;
 		case Qt::Key_N: shift = QPoint(1, 1); break;
 
+		case Qt::Key_A: color = canvas.add_color(Chthon::Pixmap::Color()); startColorInput(); break;
 		case Qt::Key_PageUp: pickPrevColor(); break;
 		case Qt::Key_PageDown: pickNextColor(); break;
 		case Qt::Key_NumberSign: startColorInput(); break;
