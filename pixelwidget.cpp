@@ -8,7 +8,7 @@
 
 const int MIN_ZOOM_FACTOR = 2;
 
-enum { DRAWING_MODE, COLOR_INPUT_MODE, COPY_MODE };
+enum { DRAWING_MODE, COLOR_INPUT_MODE, COPY_MODE, PASTE_MODE };
 
 PixelWidget::PixelWidget(const QString & imageFileName, const QSize & newSize, QWidget * parent)
 	: QWidget(parent), zoomFactor(4), color(0), fileName(imageFileName), canvas(32, 32), mode(DRAWING_MODE), wholeScreenChanged(true), do_draw_grid(false)
@@ -105,6 +105,12 @@ void PixelWidget::keyPressEvent(QKeyEvent * event)
 	if(mode == COPY_MODE) {
 		switch(event->key()) {
 			case Qt::Key_Escape: mode = DRAWING_MODE; break;
+			case Qt::Key_V: startPasteMode(); break;
+			default: break;
+		}
+	} else if(mode == PASTE_MODE) {
+		switch(event->key()) {
+			case Qt::Key_Escape: mode = DRAWING_MODE; break;
 			default: break;
 		}
 	} else if(mode == DRAWING_MODE) {
@@ -138,6 +144,23 @@ void PixelWidget::startCopyMode()
 {
 	mode = COPY_MODE;
 	selection_start = cursor;
+	update();
+}
+
+void PixelWidget::startPasteMode()
+{
+	mode = PASTE_MODE;
+	selection = QRect(
+			QPoint(
+				qMin(cursor.x(), selection_start.x()),
+				qMin(cursor.y(), selection_start.y())
+				),
+			QSize(
+				qAbs(cursor.x() - selection_start.x()),
+				qAbs(cursor.y() - selection_start.y())
+				)
+			);
+	cursor = selection.topLeft();
 	update();
 }
 
@@ -243,8 +266,18 @@ void PixelWidget::shiftCursor(const QPoint & shift, int speed)
 	unsigned new_x = cursor.x() + shift.x() * speed;
 	unsigned new_y = cursor.y() + shift.y() * speed;
 	if(speed > 1) {
-		new_x = qBound(0u, new_x, canvas.width() - 1);
-		new_y = qBound(0u, new_y, canvas.height() - 1);
+		if(mode == PASTE_MODE) {
+			new_x = qBound(0u, new_x, canvas.width() - 1);
+			new_y = qBound(0u, new_y, canvas.height() - 1);
+		} else {
+			new_x = qBound(0u, new_x, canvas.width() - selection.width() - 1);
+			new_y = qBound(0u, new_y, canvas.height() - selection.height() - 1);
+		}
+	}
+	if(mode == PASTE_MODE) {
+		if(new_x + selection.width() >= canvas.width() || new_y + selection.height() >= canvas.height()) {
+			return;
+		}
 	}
 	if(new_x >= canvas.width() || new_y >= canvas.height()) {
 		return;
@@ -286,7 +319,7 @@ Chthon::Pixmap::Color PixelWidget::indexToRealColor(uint index)
 	return canvas.color(index);
 }
 
-void drawCursor(QPainter * painter, const QRect & rect)
+void PixelWidget::drawCursor(QPainter * painter, const QRect & rect)
 {
 	painter->setCompositionMode(QPainter::RasterOp_SourceXorDestination);
 	painter->setPen(Qt::white);
@@ -294,10 +327,18 @@ void drawCursor(QPainter * painter, const QRect & rect)
 	QPoint width = QPoint(rect.width(), 0);
 	QPoint height = QPoint(0, rect.height());
 	QVector<QPoint> lines;
-	lines << rect.topLeft() - width << rect.topRight() + width;
-	lines << rect.bottomLeft() - width << rect.bottomRight() + width;
-	lines << rect.topLeft() - height << rect.bottomLeft() + height;
-	lines << rect.topRight() - height << rect.bottomRight() + height;
+	if(mode == PASTE_MODE) {
+		QRect selection_rect = QRect(rect.topLeft(), selection.size() * zoomFactor);
+		lines << selection_rect.topLeft() - width << selection_rect.topRight() + width;
+		lines << selection_rect.bottomLeft() - width << selection_rect.bottomRight() + width;
+		lines << selection_rect.topLeft() - height << selection_rect.bottomLeft() + height;
+		lines << selection_rect.topRight() - height << selection_rect.bottomRight() + height;
+	} else {
+		lines << rect.topLeft() - width << rect.topRight() + width;
+		lines << rect.bottomLeft() - width << rect.bottomRight() + width;
+		lines << rect.topLeft() - height << rect.bottomLeft() + height;
+		lines << rect.topRight() - height << rect.bottomRight() + height;
+	}
 	painter->drawLines(lines);
 
 	painter->setCompositionMode(QPainter::CompositionMode_SourceOver);
@@ -429,22 +470,22 @@ void PixelWidget::paintEvent(QPaintEvent*)
 				);
 		selected_pixels.setWidth(selected_pixels.width() + 1);
 		selected_pixels.setHeight(selected_pixels.height() + 1);
-		QRect selection = QRect(
+		QRect selection_rect = QRect(
 				leftTop + selected_pixels.topLeft() * zoomFactor,
 				selected_pixels.size() * zoomFactor
 				);
-		if(selection.isValid()) {
-			selection.setSize(selection.size() - QSize(1, 1));
+		if(selection_rect.isValid()) {
+			selection_rect.setSize(selection_rect.size() - QSize(1, 1));
 		}
 		QPen solid_pen(Qt::SolidLine);
 		solid_pen.setColor(Qt::white);
 		painter.setPen(solid_pen);
-		painter.drawRect(selection);
+		painter.drawRect(selection_rect);
 
 		QPen dot_pen(Qt::DotLine);
 		dot_pen.setColor(Qt::black);
 		painter.setPen(dot_pen);
-		painter.drawRect(selection);
+		painter.drawRect(selection_rect);
 	}
 
 	painter.setCompositionMode(QPainter::CompositionMode_Destination);

@@ -23,6 +23,7 @@ private:
 	bool wholeScreenChanged;
 	bool do_draw_grid;
 	QPoint selection_start;
+	QRect selection;
 
 	void switch_draw_grid();
 	Chthon::Pixmap::Color indexToRealColor(uint index);
@@ -41,4 +42,6 @@ private:
 	void pickPrevColor();
 	void save();
 	void startCopyMode();
+	void startPasteMode();
+	void drawCursor(QPainter * painter, const QRect & rect);
 };
