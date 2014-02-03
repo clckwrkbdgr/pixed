@@ -78,7 +78,6 @@ void PixelWidget::keyPressEvent(QKeyEvent * event)
 				}
 			}
 		}
-		wholeScreenChanged = false;
 		update();
 		return;
 	}
@@ -255,7 +254,7 @@ void PixelWidget::endColorInput()
 		}
 	}
 	canvas.set_color(color, value);
-	wholeScreenChanged = false;
+	wholeScreenChanged = true;
 	update();
 }
 
