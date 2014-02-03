@@ -82,14 +82,6 @@ void PixelWidget::keyPressEvent(QKeyEvent * event)
 		update();
 		return;
 	}
-	if(mode == COPY_MODE) {
-		switch(event->key()) {
-			case Qt::Key_Escape: mode = DRAWING_MODE; break;
-			default: break;
-		}
-		update();
-		return;
-	}
 
 	QPoint shift;
 	switch(event->key()) {
@@ -102,14 +94,6 @@ void PixelWidget::keyPressEvent(QKeyEvent * event)
 		case Qt::Key_B: shift = QPoint(-1, 1); break;
 		case Qt::Key_N: shift = QPoint(1, 1); break;
 
-		case Qt::Key_C: startCopyMode(); break;
-		case Qt::Key_A: color = canvas.add_color(Chthon::Pixmap::Color()); startColorInput(); break;
-		case Qt::Key_PageUp: pickPrevColor(); break;
-		case Qt::Key_PageDown: pickNextColor(); break;
-		case Qt::Key_NumberSign: startColorInput(); break;
-		case Qt::Key_Period: takeColorUnderCursor(); break;
-		case Qt::Key_D: case Qt::Key_I: case Qt::Key_Space: putColorAtCursor(); break;
-		case Qt::Key_P: floodFill(); break;
 		case Qt::Key_Q: close(); break;
 		case Qt::Key_S: if(event->modifiers().testFlag(Qt::ShiftModifier)) { save(); }; break;
 		case Qt::Key_G: if(event->modifiers().testFlag(Qt::ControlModifier)) { switch_draw_grid(); }; break;
@@ -117,6 +101,23 @@ void PixelWidget::keyPressEvent(QKeyEvent * event)
 		case Qt::Key_Minus: zoomOut(); break;
 		case Qt::Key_Home: centerCanvas(); break;
 		default: QWidget::keyPressEvent(event);
+	}
+	if(mode == COPY_MODE) {
+		switch(event->key()) {
+			case Qt::Key_Escape: mode = DRAWING_MODE; break;
+			default: break;
+		}
+	} else if(mode == DRAWING_MODE) {
+		switch(event->key()) {
+			case Qt::Key_C: startCopyMode(); break;
+			case Qt::Key_A: color = canvas.add_color(Chthon::Pixmap::Color()); startColorInput(); break;
+			case Qt::Key_PageUp: pickPrevColor(); break;
+			case Qt::Key_PageDown: pickNextColor(); break;
+			case Qt::Key_NumberSign: startColorInput(); break;
+			case Qt::Key_Period: takeColorUnderCursor(); break;
+			case Qt::Key_D: case Qt::Key_I: case Qt::Key_Space: putColorAtCursor(); break;
+			case Qt::Key_P: floodFill(); break;
+		}
 	}
 	oldCursor = cursor;
 	if(!shift.isNull()) {
@@ -130,6 +131,7 @@ void PixelWidget::keyPressEvent(QKeyEvent * event)
 			shiftCursor(shift, speed);
 		}
 	}
+	update();
 }
 
 void PixelWidget::startCopyMode()
