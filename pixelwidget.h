@@ -44,4 +44,5 @@ private:
 	void startCopyMode();
 	void startPasteMode();
 	void drawCursor(QPainter * painter, const QRect & rect);
+	void pasteSelection();
 };

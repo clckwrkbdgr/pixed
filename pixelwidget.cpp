@@ -110,6 +110,7 @@ void PixelWidget::keyPressEvent(QKeyEvent * event)
 		}
 	} else if(mode == PASTE_MODE) {
 		switch(event->key()) {
+			case Qt::Key_Return: pasteSelection(); break;
 			case Qt::Key_Escape: mode = DRAWING_MODE; break;
 			default: break;
 		}
@@ -137,6 +138,26 @@ void PixelWidget::keyPressEvent(QKeyEvent * event)
 			shiftCursor(shift, speed);
 		}
 	}
+	update();
+}
+
+void PixelWidget::pasteSelection()
+{
+	selection.setSize(selection.size() + QSize(1, 1));
+	QVector<int> pixels(selection.width() * selection.height());;
+	for(int x = 0; x < selection.width(); ++x) {
+		for(int y = 0; y < selection.height(); ++y) {
+			pixels[x + y * selection.width()] = canvas.pixel(selection.left() + x, selection.top() + y);
+		}
+	}
+	for(int x = 0; x < selection.width(); ++x) {
+		for(int y = 0; y < selection.height(); ++y) {
+			int sx = x + cursor.x();
+			int sy = y + cursor.y();
+			canvas.set_pixel(sx, sy, pixels[x + y * selection.width()]);
+		}
+	}
+	mode = DRAWING_MODE;
 	update();
 }
 
