@@ -8,8 +8,10 @@
 
 const int MIN_ZOOM_FACTOR = 2;
 
+enum { DRAWING_MODE, COLOR_INPUT_MODE };
+
 PixelWidget::PixelWidget(const QString & imageFileName, const QSize & newSize, QWidget * parent)
-	: QWidget(parent), zoomFactor(4), color(0), fileName(imageFileName), canvas(32, 32), colorInputMode(false), wholeScreenChanged(true), do_draw_grid(false)
+	: QWidget(parent), zoomFactor(4), color(0), fileName(imageFileName), canvas(32, 32), mode(DRAWING_MODE), wholeScreenChanged(true), do_draw_grid(false)
 {
 	setAttribute(Qt::WA_NoSystemBackground, true);
 	if(QFile::exists(fileName) && newSize.isNull()) {
@@ -52,7 +54,7 @@ void PixelWidget::save()
 
 void PixelWidget::keyPressEvent(QKeyEvent * event)
 {
-	if(colorInputMode) {
+	if(mode == COLOR_INPUT_MODE) {
 		bool isText = false;
 		switch(event->key()) {
 			case Qt::Key_Backspace:
@@ -166,7 +168,7 @@ void PixelWidget::pickPrevColor()
 
 void PixelWidget::startColorInput()
 {
-	colorInputMode = true;
+	mode = COLOR_INPUT_MODE;
 	colorEntered = "#";
 	wholeScreenChanged = false;
 	update();
@@ -174,7 +176,7 @@ void PixelWidget::startColorInput()
 
 void PixelWidget::endColorInput()
 {
-	colorInputMode = false;
+	mode = DRAWING_MODE;
 	if(colorEntered.startsWith('#')) {
 		colorEntered.remove(0, 1);
 	}
@@ -376,13 +378,17 @@ void PixelWidget::paintEvent(QPaintEvent*)
 	painter.drawRect(colorUnderCursorRect.translated(currentColorAreaShift));
 
 	painter.fillRect(QRect(33, 0, width() - 33, 32), Qt::black);
-	if(colorInputMode) {
+	switch(mode) {
+		case COLOR_INPUT_MODE:
 		painter.drawText(QPoint(32, 32) + QPoint(5, -5), colorEntered);
-	} else {
+		break;
+
+		case DRAWING_MODE:
 		painter.drawText(
 				QPoint(32, 32) + QPoint(5, -5),
 				colorToString(indexToRealColor(color)) + " [" + colorToString(indexToRealColor(indexAtPos(cursor))) + "]"
 				);
+		break;
 	}
 }
 

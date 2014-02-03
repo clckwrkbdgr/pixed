@@ -18,7 +18,7 @@ private:
 	uint color;
 	QString fileName;
 	Chthon::Pixmap canvas;
-	bool colorInputMode;
+	int mode;
 	QString colorEntered;
 	bool wholeScreenChanged;
 	bool do_draw_grid;
