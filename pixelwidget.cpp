@@ -137,6 +137,7 @@ void PixelWidget::keyPressEvent(QKeyEvent * event)
 void PixelWidget::startCopyMode()
 {
 	mode = COPY_MODE;
+	selection_start = cursor;
 	update();
 }
 
@@ -371,8 +372,79 @@ void PixelWidget::paintEvent(QPaintEvent*)
 	}
 	wholeScreenChanged = true;
 
+	// Erase old selection.
+	if(mode == COPY_MODE) {
+		QRect old_selected_pixels = QRect(
+				QPoint(
+					qMin(oldCursor.x(), selection_start.x()),
+					qMin(oldCursor.y(), selection_start.y())
+					),
+				QSize(
+					qAbs(oldCursor.x() - selection_start.x()),
+					qAbs(oldCursor.y() - selection_start.y())
+					)
+				);
+		old_selected_pixels.setWidth(old_selected_pixels.width() + 1);
+		old_selected_pixels.setHeight(old_selected_pixels.height() + 1);
+		for(int x = old_selected_pixels.left(); x <= old_selected_pixels.right(); ++x) {
+			int y = old_selected_pixels.top();
+			painter.fillRect(
+					QRect(imageRect.topLeft() + QPoint(x * zoomFactor, y * zoomFactor), QSize(zoomFactor, zoomFactor)),
+					canvas.color(canvas.pixel(x, y)).argb()
+					);
+			y = old_selected_pixels.bottom();
+			painter.fillRect(
+					QRect(imageRect.topLeft() + QPoint(x * zoomFactor, y * zoomFactor), QSize(zoomFactor, zoomFactor)),
+					canvas.color(canvas.pixel(x, y)).argb()
+					);
+		}
+		for(int y = old_selected_pixels.top(); y <= old_selected_pixels.bottom(); ++y) {
+			int x = old_selected_pixels.left();
+			painter.fillRect(
+					QRect(imageRect.topLeft() + QPoint(x * zoomFactor, y * zoomFactor), QSize(zoomFactor, zoomFactor)),
+					canvas.color(canvas.pixel(x, y)).argb()
+					);
+			x = old_selected_pixels.right();
+			painter.fillRect(
+					QRect(imageRect.topLeft() + QPoint(x * zoomFactor, y * zoomFactor), QSize(zoomFactor, zoomFactor)),
+					canvas.color(canvas.pixel(x, y)).argb()
+					);
+		}
+	}
+
 	if(do_draw_grid) {
 		drawGrid(&painter, QSize(canvas.width(), canvas.height()), imageRect.topLeft(), zoomFactor);
+	}
+
+	if(mode == COPY_MODE) {
+		QRect selected_pixels = QRect(
+				QPoint(
+					qMin(cursor.x(), selection_start.x()),
+					qMin(cursor.y(), selection_start.y())
+					),
+				QSize(
+					qAbs(cursor.x() - selection_start.x()),
+					qAbs(cursor.y() - selection_start.y())
+					)
+				);
+		selected_pixels.setWidth(selected_pixels.width() + 1);
+		selected_pixels.setHeight(selected_pixels.height() + 1);
+		QRect selection = QRect(
+				leftTop + selected_pixels.topLeft() * zoomFactor,
+				selected_pixels.size() * zoomFactor
+				);
+		if(selection.isValid()) {
+			selection.setSize(selection.size() - QSize(1, 1));
+		}
+		QPen solid_pen(Qt::SolidLine);
+		solid_pen.setColor(Qt::white);
+		painter.setPen(solid_pen);
+		painter.drawRect(selection);
+
+		QPen dot_pen(Qt::DotLine);
+		dot_pen.setColor(Qt::black);
+		painter.setPen(dot_pen);
+		painter.drawRect(selection);
 	}
 
 	painter.setCompositionMode(QPainter::CompositionMode_Destination);

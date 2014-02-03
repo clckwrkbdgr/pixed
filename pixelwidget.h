@@ -22,6 +22,7 @@ private:
 	QString colorEntered;
 	bool wholeScreenChanged;
 	bool do_draw_grid;
+	QPoint selection_start;
 
 	void switch_draw_grid();
 	Chthon::Pixmap::Color indexToRealColor(uint index);
