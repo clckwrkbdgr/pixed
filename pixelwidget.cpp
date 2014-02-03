@@ -328,7 +328,7 @@ void PixelWidget::drawCursor(QPainter * painter, const QRect & rect)
 	QPoint height = QPoint(0, rect.height());
 	QVector<QPoint> lines;
 	if(mode == PASTE_MODE) {
-		QRect selection_rect = QRect(rect.topLeft(), selection.size() * zoomFactor);
+		QRect selection_rect = QRect(rect.topLeft(), (selection.size() + QSize(1, 1)) * zoomFactor);
 		lines << selection_rect.topLeft() - width << selection_rect.topRight() + width;
 		lines << selection_rect.bottomLeft() - width << selection_rect.bottomRight() + width;
 		lines << selection_rect.topLeft() - height << selection_rect.bottomLeft() + height;
@@ -457,8 +457,8 @@ void PixelWidget::paintEvent(QPaintEvent*)
 		drawGrid(&painter, QSize(canvas.width(), canvas.height()), imageRect.topLeft(), zoomFactor);
 	}
 
-	if(mode == COPY_MODE) {
-		QRect selected_pixels = QRect(
+	if(mode == COPY_MODE || mode == PASTE_MODE) {
+		QRect selected_pixels = (mode == PASTE_MODE) ? selection : QRect(
 				QPoint(
 					qMin(cursor.x(), selection_start.x()),
 					qMin(cursor.y(), selection_start.y())
