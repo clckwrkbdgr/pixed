@@ -8,7 +8,7 @@
 
 const int MIN_ZOOM_FACTOR = 2;
 
-enum { DRAWING_MODE, COLOR_INPUT_MODE };
+enum { DRAWING_MODE, COLOR_INPUT_MODE, COPY_MODE };
 
 PixelWidget::PixelWidget(const QString & imageFileName, const QSize & newSize, QWidget * parent)
 	: QWidget(parent), zoomFactor(4), color(0), fileName(imageFileName), canvas(32, 32), mode(DRAWING_MODE), wholeScreenChanged(true), do_draw_grid(false)
@@ -82,6 +82,14 @@ void PixelWidget::keyPressEvent(QKeyEvent * event)
 		update();
 		return;
 	}
+	if(mode == COPY_MODE) {
+		switch(event->key()) {
+			case Qt::Key_Escape: mode = DRAWING_MODE; break;
+			default: break;
+		}
+		update();
+		return;
+	}
 
 	QPoint shift;
 	switch(event->key()) {
@@ -94,6 +102,7 @@ void PixelWidget::keyPressEvent(QKeyEvent * event)
 		case Qt::Key_B: shift = QPoint(-1, 1); break;
 		case Qt::Key_N: shift = QPoint(1, 1); break;
 
+		case Qt::Key_C: startCopyMode(); break;
 		case Qt::Key_A: color = canvas.add_color(Chthon::Pixmap::Color()); startColorInput(); break;
 		case Qt::Key_PageUp: pickPrevColor(); break;
 		case Qt::Key_PageDown: pickNextColor(); break;
@@ -121,6 +130,12 @@ void PixelWidget::keyPressEvent(QKeyEvent * event)
 			shiftCursor(shift, speed);
 		}
 	}
+}
+
+void PixelWidget::startCopyMode()
+{
+	mode = COPY_MODE;
+	update();
 }
 
 void PixelWidget::switch_draw_grid()

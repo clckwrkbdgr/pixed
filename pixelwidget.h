@@ -39,4 +39,5 @@ private:
 	void pickNextColor();
 	void pickPrevColor();
 	void save();
+	void startCopyMode();
 };
