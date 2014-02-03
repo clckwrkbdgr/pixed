@@ -394,6 +394,16 @@ QString colorToString(const Chthon::Pixmap::Color & color)
 		;
 }
 
+void PixelWidget::draw_pixel(QPainter * painter, const QPoint & topLeft, const QPoint & pos)
+{
+	Chthon::Pixmap::Color color = canvas.color(canvas.pixel(pos.x(), pos.y()));
+	if(color.transparent) {
+		painter->fillRect(QRect(topLeft + pos * zoomFactor, QSize(zoomFactor, zoomFactor)), Qt::magenta);
+	} else {
+		painter->fillRect(QRect(topLeft + pos * zoomFactor, QSize(zoomFactor, zoomFactor)), QColor(color.argb()));
+	}
+}
+
 void PixelWidget::paintEvent(QPaintEvent*)
 {
 	QPoint canvas_center = QPoint(canvas.width() / 2, canvas.height() / 2);
@@ -413,10 +423,7 @@ void PixelWidget::paintEvent(QPaintEvent*)
 		painter.drawRect(imageRect.adjusted(-1, -1, 0, 0));
 		for(unsigned x = 0; x < canvas.width(); ++x) {
 			for(unsigned y = 0; y < canvas.height(); ++y) {
-				painter.fillRect(
-						QRect(imageRect.topLeft() + QPoint(x * zoomFactor, y * zoomFactor), QSize(zoomFactor, zoomFactor)),
-						canvas.color(canvas.pixel(x, y)).argb()
-						);
+				draw_pixel(&painter, leftTop, QPoint(x, y));
 			}
 		}
 	} else {
@@ -440,27 +447,15 @@ void PixelWidget::paintEvent(QPaintEvent*)
 		old_selected_pixels.setHeight(old_selected_pixels.height() + 1);
 		for(int x = old_selected_pixels.left(); x <= old_selected_pixels.right(); ++x) {
 			int y = old_selected_pixels.top();
-			painter.fillRect(
-					QRect(imageRect.topLeft() + QPoint(x * zoomFactor, y * zoomFactor), QSize(zoomFactor, zoomFactor)),
-					canvas.color(canvas.pixel(x, y)).argb()
-					);
+			draw_pixel(&painter, leftTop, QPoint(x, y));
 			y = old_selected_pixels.bottom();
-			painter.fillRect(
-					QRect(imageRect.topLeft() + QPoint(x * zoomFactor, y * zoomFactor), QSize(zoomFactor, zoomFactor)),
-					canvas.color(canvas.pixel(x, y)).argb()
-					);
+			draw_pixel(&painter, leftTop, QPoint(x, y));
 		}
 		for(int y = old_selected_pixels.top(); y <= old_selected_pixels.bottom(); ++y) {
 			int x = old_selected_pixels.left();
-			painter.fillRect(
-					QRect(imageRect.topLeft() + QPoint(x * zoomFactor, y * zoomFactor), QSize(zoomFactor, zoomFactor)),
-					canvas.color(canvas.pixel(x, y)).argb()
-					);
+			draw_pixel(&painter, leftTop, QPoint(x, y));
 			x = old_selected_pixels.right();
-			painter.fillRect(
-					QRect(imageRect.topLeft() + QPoint(x * zoomFactor, y * zoomFactor), QSize(zoomFactor, zoomFactor)),
-					canvas.color(canvas.pixel(x, y)).argb()
-					);
+			draw_pixel(&painter, leftTop, QPoint(x, y));
 		}
 	}
 
@@ -500,7 +495,7 @@ void PixelWidget::paintEvent(QPaintEvent*)
 	}
 
 	painter.setCompositionMode(QPainter::CompositionMode_Destination);
-	painter.fillRect(cursorRect, indexToRealColor(indexAtPos(cursor)).argb());
+	draw_pixel(&painter, leftTop, cursor);
 	drawCursor(&painter, cursorRect);
 	painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
 

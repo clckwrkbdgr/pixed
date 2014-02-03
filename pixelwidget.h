@@ -45,4 +45,5 @@ private:
 	void startPasteMode();
 	void drawCursor(QPainter * painter, const QRect & rect);
 	void pasteSelection();
+	void draw_pixel(QPainter * painter, const QPoint & topLeft, const QPoint & pos);
 };
