@@ -396,11 +396,25 @@ QString colorToString(const Chthon::Pixmap::Color & color)
 
 void PixelWidget::draw_pixel(QPainter * painter, const QPoint & topLeft, const QPoint & pos)
 {
+	QSize pixelSize = QSize(zoomFactor + 1, zoomFactor + 1);
 	Chthon::Pixmap::Color color = canvas.color(canvas.pixel(pos.x(), pos.y()));
 	if(color.transparent) {
-		painter->fillRect(QRect(topLeft + pos * zoomFactor, QSize(zoomFactor, zoomFactor)), Qt::magenta);
+		if(zoomFactor % 2 != 0) {
+			painter->fillRect(
+					QRect(topLeft + pos * zoomFactor, pixelSize),
+					(pos.x() + pos.y()) % 2 == 0 ? qRgb(0, 0, 0) : qRgb(32, 32, 32)
+					);
+		} else {
+			QPoint start = topLeft + pos * zoomFactor;
+			QPoint x_shift = QPoint(zoomFactor / 2, 0);
+			QPoint y_shift = QPoint(0, zoomFactor / 2);
+			painter->fillRect(QRect(start, pixelSize / 2), qRgb(0, 0, 0));
+			painter->fillRect(QRect(start + x_shift, pixelSize / 2), qRgb(32, 32, 32));
+			painter->fillRect(QRect(start + y_shift, pixelSize / 2), qRgb(32, 32, 32));
+			painter->fillRect(QRect(start + x_shift + y_shift, pixelSize / 2), qRgb(0, 0, 0));
+		}
 	} else {
-		painter->fillRect(QRect(topLeft + pos * zoomFactor, QSize(zoomFactor, zoomFactor)), QColor(color.argb()));
+		painter->fillRect(QRect(topLeft + pos * zoomFactor, pixelSize), QColor(color.argb()));
 	}
 }
 
