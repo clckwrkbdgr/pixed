@@ -263,24 +263,14 @@ void PixelWidget::shiftCursor(const QPoint & shift, int speed)
 	if(speed < 1) {
 		return;
 	}
-	unsigned new_x = cursor.x() + shift.x() * speed;
-	unsigned new_y = cursor.y() + shift.y() * speed;
-	if(speed > 1) {
-		if(mode == PASTE_MODE) {
-			new_x = qBound(0u, new_x, canvas.width() - 1);
-			new_y = qBound(0u, new_y, canvas.height() - 1);
-		} else {
-			new_x = qBound(0u, new_x, canvas.width() - selection.width() - 1);
-			new_y = qBound(0u, new_y, canvas.height() - selection.height() - 1);
-		}
-	}
+	int new_x = cursor.x() + shift.x() * speed;
+	int new_y = cursor.y() + shift.y() * speed;
 	if(mode == PASTE_MODE) {
-		if(new_x + selection.width() >= canvas.width() || new_y + selection.height() >= canvas.height()) {
-			return;
-		}
-	}
-	if(new_x >= canvas.width() || new_y >= canvas.height()) {
-		return;
+		new_x = qBound(0, new_x, int(canvas.width()) - selection.width() - 1);
+		new_y = qBound(0, new_y, int(canvas.height()) - selection.height() - 1);
+	} else {
+		new_x = qBound(0, new_x, int(canvas.width()) - 1);
+		new_y = qBound(0, new_y, int(canvas.height()) - 1);
 	}
 	oldCursor = cursor;
 	cursor = QPoint(new_x, new_y);
