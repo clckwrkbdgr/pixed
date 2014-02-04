@@ -60,13 +60,13 @@ void PixelWidget::keyPressEvent(SDL_KeyboardEvent * event)
 	if(mode == COLOR_INPUT_MODE) {
 		bool isText = false;
 		switch(event->keysym.sym) {
-			case Qt::Key_Backspace:
+			case SDLK_BACKSPACE:
 				if(colorEntered.size() > 1) {
 					colorEntered.remove(colorEntered.size() - 1, 1);
 				}
 				break;
-			case Qt::Key_Return: case Qt::Key_Enter: endColorInput(); break;
-			case Qt::Key_Escape: colorEntered = ""; endColorInput(); break;
+			case SDLK_RETURN: case SDLK_RETURN2: endColorInput(); break;
+			case SDLK_ESCAPE: colorEntered = ""; endColorInput(); break;
 			default: isText = true;
 		}
 		if(isText) {
@@ -87,44 +87,44 @@ void PixelWidget::keyPressEvent(SDL_KeyboardEvent * event)
 
 	QPoint shift;
 	switch(event->keysym.sym) {
-		case Qt::Key_K: case Qt::Key_Up: shift = QPoint(0, -1); break;
-		case Qt::Key_J: case Qt::Key_Down: shift = QPoint(0, 1); break;
-		case Qt::Key_H: case Qt::Key_Left: shift = QPoint(-1, 0); break;
-		case Qt::Key_L: case Qt::Key_Right: shift = QPoint(1, 0); break;
-		case Qt::Key_Y: shift = QPoint(-1, -1); break;
-		case Qt::Key_U: shift = QPoint(1, -1); break;
-		case Qt::Key_B: shift = QPoint(-1, 1); break;
-		case Qt::Key_N: shift = QPoint(1, 1); break;
+		case SDLK_k: case SDLK_UP: shift = QPoint(0, -1); break;
+		case SDLK_j: case SDLK_DOWN: shift = QPoint(0, 1); break;
+		case SDLK_h: case SDLK_LEFT: shift = QPoint(-1, 0); break;
+		case SDLK_l: case SDLK_RIGHT: shift = QPoint(1, 0); break;
+		case SDLK_y: shift = QPoint(-1, -1); break;
+		case SDLK_u: shift = QPoint(1, -1); break;
+		case SDLK_b: shift = QPoint(-1, 1); break;
+		case SDLK_n: shift = QPoint(1, 1); break;
 
-		case Qt::Key_Q: close(); break;
-		case Qt::Key_S: if(event->keysym.mod & (KMOD_RSHIFT | KMOD_LSHIFT)) { save(); }; break;
-		case Qt::Key_G: if(event->keysym.mod & (KMOD_RCTRL | KMOD_LCTRL)) { switch_draw_grid(); }; break;
-		case Qt::Key_Equal: case Qt::Key_Plus: zoomIn(); break;
-		case Qt::Key_Minus: zoomOut(); break;
-		case Qt::Key_Home: centerCanvas(); break;
+		case SDLK_q: close(); break;
+		case SDLK_s: if(event->keysym.mod & (KMOD_RSHIFT | KMOD_LSHIFT)) { save(); }; break;
+		case SDLK_g: if(event->keysym.mod & (KMOD_RCTRL | KMOD_LCTRL)) { switch_draw_grid(); }; break;
+		case SDLK_EQUALS: case SDLK_PLUS: zoomIn(); break;
+		case SDLK_MINUS: zoomOut(); break;
+		case SDLK_HOME: centerCanvas(); break;
 	}
 	if(mode == COPY_MODE) {
 		switch(event->keysym.sym) {
-			case Qt::Key_Escape: mode = DRAWING_MODE; break;
-			case Qt::Key_V: startPasteMode(); break;
+			case SDLK_ESCAPE: mode = DRAWING_MODE; break;
+			case SDLK_v: startPasteMode(); break;
 			default: break;
 		}
 	} else if(mode == PASTE_MODE) {
 		switch(event->keysym.sym) {
-			case Qt::Key_Return: pasteSelection(); break;
-			case Qt::Key_Escape: mode = DRAWING_MODE; break;
+			case SDLK_RETURN: case SDLK_RETURN2: pasteSelection(); break;
+			case SDLK_ESCAPE: mode = DRAWING_MODE; break;
 			default: break;
 		}
 	} else if(mode == DRAWING_MODE) {
 		switch(event->keysym.sym) {
-			case Qt::Key_C: startCopyMode(); break;
-			case Qt::Key_A: color = canvas.add_color(Chthon::Pixmap::Color()); startColorInput(); break;
-			case Qt::Key_PageUp: pickPrevColor(); break;
-			case Qt::Key_PageDown: pickNextColor(); break;
-			case Qt::Key_NumberSign: startColorInput(); break;
-			case Qt::Key_Period: takeColorUnderCursor(); break;
-			case Qt::Key_D: case Qt::Key_I: case Qt::Key_Space: putColorAtCursor(); break;
-			case Qt::Key_P: floodFill(); break;
+			case SDLK_c: startCopyMode(); break;
+			case SDLK_a: color = canvas.add_color(Chthon::Pixmap::Color()); startColorInput(); break;
+			case SDLK_PAGEUP: pickPrevColor(); break;
+			case SDLK_PAGEDOWN: pickNextColor(); break;
+			case SDLK_HASH: startColorInput(); break;
+			case SDLK_PERIOD: takeColorUnderCursor(); break;
+			case SDLK_d: case SDLK_i: case SDLK_SPACE: putColorAtCursor(); break;
+			case SDLK_p: floodFill(); break;
 		}
 	}
 	oldCursor = cursor;
