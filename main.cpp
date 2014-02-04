@@ -1,7 +1,7 @@
 #include "pixelwidget.h"
 #include "qgetopt.h"
-#include <QtGui/QApplication>
 #include <QtCore/QTextStream>
+#include <QtCore/QCoreApplication>
 
 struct Options {
 	int width, height;
@@ -65,7 +65,7 @@ bool Options::parse()
 
 int main(int argc, char ** argv)
 {
-	QApplication app(argc, argv);
+	QCoreApplication app(argc, argv);
 	app.setOrganizationName("kp580bm1");
 	app.setApplicationName("pixed");
 
@@ -75,6 +75,5 @@ int main(int argc, char ** argv)
 	}
 
 	PixelWidget widget(options.filename, QSize(options.width, options.height));
-	widget.showFullScreen();
-	return app.exec();
+	return widget.exec();
 }

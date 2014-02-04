@@ -1,7 +1,8 @@
 OBJECTS_DIR = tmp
+QT -= gui
 MOC_DIR = tmp
 UI_DIR = tmp
-LIBS += -lchthon
+LIBS += -lchthon -lSDL2
 
 SOURCES += main.cpp
 modules = pixelwidget qgetopt

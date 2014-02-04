@@ -2,18 +2,16 @@
 #include <QtCore/QFile>
 #include <QtCore/QTextStream>
 #include <QtCore/QCoreApplication>
-#include <QtGui/QPainter>
-#include <QtGui/QKeyEvent>
 #include "pixelwidget.h"
+#include <SDL2/SDL.h>
 
 const int MIN_ZOOM_FACTOR = 2;
 
 enum { DRAWING_MODE, COLOR_INPUT_MODE, COPY_MODE, PASTE_MODE };
 
-PixelWidget::PixelWidget(const QString & imageFileName, const QSize & newSize, QWidget * parent)
-	: QWidget(parent), zoomFactor(4), color(0), fileName(imageFileName), canvas(32, 32), mode(DRAWING_MODE), wholeScreenChanged(true), do_draw_grid(false)
+PixelWidget::PixelWidget(const QString & imageFileName, const QSize & newSize)
+	: renderer(0), quit(false), zoomFactor(4), color(0), fileName(imageFileName), canvas(32, 32), mode(DRAWING_MODE), wholeScreenChanged(true), do_draw_grid(false)
 {
-	setAttribute(Qt::WA_NoSystemBackground, true);
 	if(QFile::exists(fileName) && newSize.isNull()) {
 		QFile file(fileName);
 		QString data;
@@ -42,6 +40,11 @@ PixelWidget::~PixelWidget()
 	save();
 }
 
+void PixelWidget::close()
+{
+	quit = true;
+}
+
 void PixelWidget::save()
 {
 	QFile file(fileName);
@@ -52,11 +55,11 @@ void PixelWidget::save()
 	}
 }
 
-void PixelWidget::keyPressEvent(QKeyEvent * event)
+void PixelWidget::keyPressEvent(SDL_KeyboardEvent * event)
 {
 	if(mode == COLOR_INPUT_MODE) {
 		bool isText = false;
-		switch(event->key()) {
+		switch(event->keysym.sym) {
 			case Qt::Key_Backspace:
 				if(colorEntered.size() > 1) {
 					colorEntered.remove(colorEntered.size() - 1, 1);
@@ -67,15 +70,15 @@ void PixelWidget::keyPressEvent(QKeyEvent * event)
 			default: isText = true;
 		}
 		if(isText) {
-			foreach(const QChar & c, event->text()) {
-				if(c == '-') {
-					colorEntered = "-";
-				} else if(QString("0123456789ABCDEFabcdef").contains(c)) {
-					if(colorEntered == "-") {
-						colorEntered = "";
-					}
-					colorEntered += c;
+			std::string text = SDL_GetKeyName(event->keysym.sym);
+			char c = text[0];
+			if(c == '-') {
+				colorEntered = "-";
+			} else if(QString("0123456789ABCDEFabcdef").contains(c)) {
+				if(colorEntered == "-") {
+					colorEntered = "";
 				}
+				colorEntered += c;
 			}
 		}
 		update();
@@ -83,7 +86,7 @@ void PixelWidget::keyPressEvent(QKeyEvent * event)
 	}
 
 	QPoint shift;
-	switch(event->key()) {
+	switch(event->keysym.sym) {
 		case Qt::Key_K: case Qt::Key_Up: shift = QPoint(0, -1); break;
 		case Qt::Key_J: case Qt::Key_Down: shift = QPoint(0, 1); break;
 		case Qt::Key_H: case Qt::Key_Left: shift = QPoint(-1, 0); break;
@@ -94,27 +97,26 @@ void PixelWidget::keyPressEvent(QKeyEvent * event)
 		case Qt::Key_N: shift = QPoint(1, 1); break;
 
 		case Qt::Key_Q: close(); break;
-		case Qt::Key_S: if(event->modifiers().testFlag(Qt::ShiftModifier)) { save(); }; break;
-		case Qt::Key_G: if(event->modifiers().testFlag(Qt::ControlModifier)) { switch_draw_grid(); }; break;
+		case Qt::Key_S: if(event->keysym.mod & (KMOD_RSHIFT | KMOD_LSHIFT)) { save(); }; break;
+		case Qt::Key_G: if(event->keysym.mod & (KMOD_RCTRL | KMOD_LCTRL)) { switch_draw_grid(); }; break;
 		case Qt::Key_Equal: case Qt::Key_Plus: zoomIn(); break;
 		case Qt::Key_Minus: zoomOut(); break;
 		case Qt::Key_Home: centerCanvas(); break;
-		default: QWidget::keyPressEvent(event);
 	}
 	if(mode == COPY_MODE) {
-		switch(event->key()) {
+		switch(event->keysym.sym) {
 			case Qt::Key_Escape: mode = DRAWING_MODE; break;
 			case Qt::Key_V: startPasteMode(); break;
 			default: break;
 		}
 	} else if(mode == PASTE_MODE) {
-		switch(event->key()) {
+		switch(event->keysym.sym) {
 			case Qt::Key_Return: pasteSelection(); break;
 			case Qt::Key_Escape: mode = DRAWING_MODE; break;
 			default: break;
 		}
 	} else if(mode == DRAWING_MODE) {
-		switch(event->key()) {
+		switch(event->keysym.sym) {
 			case Qt::Key_C: startCopyMode(); break;
 			case Qt::Key_A: color = canvas.add_color(Chthon::Pixmap::Color()); startColorInput(); break;
 			case Qt::Key_PageUp: pickPrevColor(); break;
@@ -128,10 +130,10 @@ void PixelWidget::keyPressEvent(QKeyEvent * event)
 	oldCursor = cursor;
 	if(!shift.isNull()) {
 		int speed = 1;
-		if(event->modifiers().testFlag(Qt::ControlModifier)) {
+		if(event->keysym.mod & (KMOD_RCTRL | KMOD_LCTRL)) {
 			speed = 10;
 		}
-		if(event->modifiers().testFlag(Qt::ShiftModifier)) {
+		if(event->keysym.mod & (KMOD_RSHIFT | KMOD_LSHIFT)) {
 			shiftCanvas(shift, speed);
 		} else {
 			shiftCursor(shift, speed);
@@ -189,15 +191,6 @@ void PixelWidget::switch_draw_grid()
 	do_draw_grid = !do_draw_grid;
 	wholeScreenChanged = true;
 	update();
-}
-
-uint indexAtPos(const QImage & image, const QPoint & pos)
-{
-	switch(image.depth()) {
-		case 1: case 8: return image.pixelIndex(pos);
-		case 32: return image.pixel(pos);
-	}
-	return 0;
 }
 
 void PixelWidget::floodFill()
@@ -329,56 +322,64 @@ Chthon::Pixmap::Color PixelWidget::indexToRealColor(uint index)
 	return canvas.color(index);
 }
 
-void PixelWidget::drawCursor(QPainter * painter, const QRect & rect)
+SDL_Point to_sdl_point(const QPoint & point)
 {
-	painter->setCompositionMode(QPainter::RasterOp_SourceXorDestination);
-	painter->setPen(Qt::white);
-
-	QPoint width = QPoint(rect.width(), 0);
-	QPoint height = QPoint(0, rect.height());
-	QVector<QPoint> lines;
-	if(mode == PASTE_MODE) {
-		QRect selection_rect = QRect(rect.topLeft(), (selection.size() + QSize(1, 1)) * zoomFactor);
-		lines << selection_rect.topLeft() - width << selection_rect.topRight() + width;
-		lines << selection_rect.bottomLeft() - width << selection_rect.bottomRight() + width;
-		lines << selection_rect.topLeft() - height << selection_rect.bottomLeft() + height;
-		lines << selection_rect.topRight() - height << selection_rect.bottomRight() + height;
-	} else {
-		lines << rect.topLeft() - width << rect.topRight() + width;
-		lines << rect.bottomLeft() - width << rect.bottomRight() + width;
-		lines << rect.topLeft() - height << rect.bottomLeft() + height;
-		lines << rect.topRight() - height << rect.bottomRight() + height;
-	}
-	painter->drawLines(lines);
-
-	painter->setCompositionMode(QPainter::CompositionMode_SourceOver);
+	SDL_Point result;
+	result.x = point.x();
+	result.y = point.y();
+	return result;
 }
 
-void drawGrid(QPainter * painter, const QSize & imageSize, const QPoint & topLeft, int zoomFactor)
+void PixelWidget::drawCursor(const QRect & cursor_rect)
 {
-	QVector<QPoint> white_lines, black_lines;
-	for(int x = 1; x < imageSize.width(); ++x) {
-		white_lines << topLeft + QPoint(x * zoomFactor, 0);
-		white_lines << topLeft + QPoint(x * zoomFactor, imageSize.height() * zoomFactor);
-		black_lines << topLeft + QPoint(0, 1) + QPoint(x * zoomFactor, 0);
-		black_lines << topLeft + QPoint(0, 1) + QPoint(x * zoomFactor, imageSize.height() * zoomFactor);
+	// TODO painter->setCompositionMode(QPainter::RasterOp_SourceXorDestination);
+	SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+
+	QPoint width = QPoint(cursor_rect.width(), 0);
+	QPoint height = QPoint(0, cursor_rect.height());
+	QVector<SDL_Point> lines;
+	if(mode == PASTE_MODE) {
+		QRect selection_rect = QRect(cursor_rect.topLeft(), (selection.size() + QSize(1, 1)) * zoomFactor);
+		lines << to_sdl_point(selection_rect.topLeft() - width) << to_sdl_point(selection_rect.topRight() + width);
+		lines << to_sdl_point(selection_rect.bottomLeft() - width) << to_sdl_point(selection_rect.bottomRight() + width);
+		lines << to_sdl_point(selection_rect.topLeft() - height) << to_sdl_point(selection_rect.bottomLeft() + height);
+		lines << to_sdl_point(selection_rect.topRight() - height) << to_sdl_point(selection_rect.bottomRight() + height);
+	} else {
+		lines << to_sdl_point(cursor_rect.topLeft() - width) << to_sdl_point(cursor_rect.topRight() + width);
+		lines << to_sdl_point(cursor_rect.bottomLeft() - width) << to_sdl_point(cursor_rect.bottomRight() + width);
+		lines << to_sdl_point(cursor_rect.topLeft() - height) << to_sdl_point(cursor_rect.bottomLeft() + height);
+		lines << to_sdl_point(cursor_rect.topRight() - height) << to_sdl_point(cursor_rect.bottomRight() + height);
 	}
-	for(int y = 1; y < imageSize.height(); ++y) {
-		white_lines << topLeft + QPoint(0, y * zoomFactor);
-		white_lines << topLeft + QPoint(imageSize.width() * zoomFactor, y * zoomFactor);
-		black_lines << topLeft + QPoint(1, 0) + QPoint(0, y * zoomFactor);
-		black_lines << topLeft + QPoint(1, 0) + QPoint(imageSize.width() * zoomFactor, y * zoomFactor);
+	SDL_RenderDrawLines(renderer, lines.constData(), lines.count());
+
+	// TODO painter->setCompositionMode(QPainter::CompositionMode_SourceOver);
+}
+
+void PixelWidget::drawGrid(const QPoint & topLeft)
+{
+	QVector<SDL_Point> white_lines, black_lines;
+	for(unsigned x = 1; x < canvas.width(); ++x) {
+		white_lines << to_sdl_point(topLeft + QPoint(x * zoomFactor, 0));
+		white_lines << to_sdl_point(topLeft + QPoint(x * zoomFactor, canvas.height() * zoomFactor));
+		black_lines << to_sdl_point(topLeft + QPoint(0, 1) + QPoint(x * zoomFactor, 0));
+		black_lines << to_sdl_point(topLeft + QPoint(0, 1) + QPoint(x * zoomFactor, canvas.height() * zoomFactor));
+	}
+	for(unsigned y = 1; y < canvas.height(); ++y) {
+		white_lines << to_sdl_point(topLeft + QPoint(0, y * zoomFactor));
+		white_lines << to_sdl_point(topLeft + QPoint(canvas.width() * zoomFactor, y * zoomFactor));
+		black_lines << to_sdl_point(topLeft + QPoint(1, 0) + QPoint(0, y * zoomFactor));
+		black_lines << to_sdl_point(topLeft + QPoint(1, 0) + QPoint(canvas.width() * zoomFactor, y * zoomFactor));
 	}
 
-	QPen pen(Qt::DotLine);
+	// TODO QPen pen(Qt::DotLine);
 
-	pen.setColor(Qt::white);
-	painter->setPen(pen);
-	painter->drawLines(white_lines);
+	SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+	// TODO painter->setPen(pen);
+	SDL_RenderDrawLines(renderer, white_lines.constData(), white_lines.count());
 
-	pen.setColor(Qt::black);
-	painter->setPen(pen);
-	painter->drawLines(black_lines);
+	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+	// TODO painter->setPen(pen);
+	SDL_RenderDrawLines(renderer, black_lines.constData(), black_lines.count());
 }
 
 QString colorToString(const Chthon::Pixmap::Color & color)
@@ -393,54 +394,93 @@ QString colorToString(const Chthon::Pixmap::Color & color)
 		;
 }
 
-void PixelWidget::draw_pixel(QPainter * painter, const QPoint & topLeft, const QPoint & pos)
+void PixelWidget::draw_pixel(const QPoint & topLeft, const QPoint & pos)
 {
 	QSize pixelSize = QSize(zoomFactor + 1, zoomFactor + 1);
 	Chthon::Pixmap::Color color = canvas.color(canvas.pixel(pos.x(), pos.y()));
 	if(color.transparent) {
 		if(zoomFactor % 2 != 0) {
-			painter->fillRect(
-					QRect(topLeft + pos * zoomFactor, pixelSize),
-					(pos.x() + pos.y()) % 2 == 0 ? qRgb(0, 0, 0) : qRgb(32, 32, 32)
-					);
+			QRect q_r = QRect(topLeft + pos * zoomFactor, pixelSize);
+			SDL_Rect r;
+			r.x = q_r.x();
+			r.y = q_r.y();
+			r.w = q_r.width();
+			r.h = q_r.height();
+			int i = (pos.x() + pos.y()) % 2 == 0 ? 0 : 32;
+			SDL_SetRenderDrawColor(renderer, i, i, i, 255);
+			SDL_RenderFillRect(renderer, &r);
 		} else {
-			QPoint start = topLeft + pos * zoomFactor;
-			QPoint x_shift = QPoint(zoomFactor / 2, 0);
-			QPoint y_shift = QPoint(0, zoomFactor / 2);
-			painter->fillRect(QRect(start, pixelSize / 2), qRgb(0, 0, 0));
-			painter->fillRect(QRect(start + x_shift, pixelSize / 2), qRgb(32, 32, 32));
-			painter->fillRect(QRect(start + y_shift, pixelSize / 2), qRgb(32, 32, 32));
-			painter->fillRect(QRect(start + x_shift + y_shift, pixelSize / 2), qRgb(0, 0, 0));
+			QRect q_r = QRect(topLeft + pos * zoomFactor, pixelSize / 2);
+			SDL_Rect r;
+			r.x = q_r.x();
+			r.y = q_r.y();
+			r.w = q_r.width();
+			r.h = q_r.height();
+
+			SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+			SDL_RenderFillRect(renderer, &r);
+			r.x += zoomFactor / 2;
+			r.y += zoomFactor / 2;
+			SDL_RenderFillRect(renderer, &r);
+
+			SDL_SetRenderDrawColor(renderer, 32, 32, 32, 255);
+			r.x -= zoomFactor / 2;
+			SDL_RenderFillRect(renderer, &r);
+			r.x += zoomFactor / 2;
+			r.y -= zoomFactor / 2;
+			SDL_RenderFillRect(renderer, &r);
 		}
 	} else {
-		painter->fillRect(QRect(topLeft + pos * zoomFactor, pixelSize), QColor(color.argb()));
+		QRect q_r = QRect(topLeft + pos * zoomFactor, pixelSize);
+		SDL_Rect r;
+		r.x = q_r.x();
+		r.y = q_r.y();
+		r.w = q_r.width();
+		r.h = q_r.height();
+		SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, 255);
+		SDL_RenderFillRect(renderer, &r);
 	}
 }
 
-void PixelWidget::paintEvent(QPaintEvent*)
+void PixelWidget::update()
 {
 	QPoint canvas_center = QPoint(canvas.width() / 2, canvas.height() / 2);
 	QSize canvas_size = QSize(canvas.width(), canvas.height());
-	QPoint leftTop = rect().center() - (canvas_center - canvasShift) * zoomFactor;
+	QPoint rect_center = QPoint(rect.w / 2, rect.h / 2);
+	QPoint leftTop = rect_center - (canvas_center - canvasShift) * zoomFactor;
 	QRect imageRect = QRect(leftTop, canvas_size * zoomFactor);
 	QRect cursorRect = QRect(leftTop + cursor * zoomFactor, QSize(zoomFactor, zoomFactor));
 	QRect oldCursorRect = QRect(leftTop + oldCursor * zoomFactor, QSize(zoomFactor, zoomFactor));
-	QRect currentColorRect = QRect(0, 0, 32, 32);
-	QRect colorUnderCursorRect = QRect(0, 0, 8, 8).translated(24, 24);
+	SDL_Rect colorUnderCursorRect;
+	colorUnderCursorRect.x = 24;
+	colorUnderCursorRect.y = 24;
+	colorUnderCursorRect.w = 8;
+	colorUnderCursorRect.h = 8;
+	SDL_Rect currentColorRect;
+	currentColorRect.x = 0;
+	currentColorRect.y = 0;
+	currentColorRect.w = 32;
+	currentColorRect.h = 32;
 
-	QPainter painter(this);
-	painter.setBrush(Qt::NoBrush);
+	// TODO painter.setBrush(Qt::NoBrush);
 
 	if(wholeScreenChanged) {
-		painter.fillRect(rect(), Qt::black);
-		painter.drawRect(imageRect.adjusted(-1, -1, 0, 0));
+		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+		SDL_RenderClear(renderer);
+		SDL_Rect imageRect_adjusted;
+		imageRect_adjusted.x = imageRect.x() - 1;
+		imageRect_adjusted.y = imageRect.y() - 1;
+		imageRect_adjusted.w = imageRect.width();
+		imageRect_adjusted.h = imageRect.height();
+		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+		SDL_RenderDrawRect(renderer, &imageRect_adjusted);
 		for(unsigned x = 0; x < canvas.width(); ++x) {
 			for(unsigned y = 0; y < canvas.height(); ++y) {
-				draw_pixel(&painter, leftTop, QPoint(x, y));
+				draw_pixel(leftTop, QPoint(x, y));
 			}
 		}
 	} else {
-		drawCursor(&painter, oldCursorRect);
+		drawCursor(oldCursorRect);
 	}
 	wholeScreenChanged = true;
 
@@ -460,20 +500,20 @@ void PixelWidget::paintEvent(QPaintEvent*)
 		old_selected_pixels.setHeight(old_selected_pixels.height() + 1);
 		for(int x = old_selected_pixels.left(); x <= old_selected_pixels.right(); ++x) {
 			int y = old_selected_pixels.top();
-			draw_pixel(&painter, leftTop, QPoint(x, y));
+			draw_pixel(leftTop, QPoint(x, y));
 			y = old_selected_pixels.bottom();
-			draw_pixel(&painter, leftTop, QPoint(x, y));
+			draw_pixel(leftTop, QPoint(x, y));
 		}
 		for(int y = old_selected_pixels.top(); y <= old_selected_pixels.bottom(); ++y) {
 			int x = old_selected_pixels.left();
-			draw_pixel(&painter, leftTop, QPoint(x, y));
+			draw_pixel(leftTop, QPoint(x, y));
 			x = old_selected_pixels.right();
-			draw_pixel(&painter, leftTop, QPoint(x, y));
+			draw_pixel(leftTop, QPoint(x, y));
 		}
 	}
 
 	if(do_draw_grid) {
-		drawGrid(&painter, QSize(canvas.width(), canvas.height()), imageRect.topLeft(), zoomFactor);
+		drawGrid(imageRect.topLeft());
 	}
 
 	if(mode == COPY_MODE || mode == PASTE_MODE) {
@@ -496,36 +536,58 @@ void PixelWidget::paintEvent(QPaintEvent*)
 		if(selection_rect.isValid()) {
 			selection_rect.setSize(selection_rect.size() - QSize(1, 1));
 		}
-		QPen solid_pen(Qt::SolidLine);
-		solid_pen.setColor(Qt::white);
-		painter.setPen(solid_pen);
-		painter.drawRect(selection_rect);
+		SDL_Rect r_selection_rect;
+		r_selection_rect.x = selection_rect.x();
+		r_selection_rect.y = selection_rect.y();
+		r_selection_rect.w = selection_rect.width();
+		r_selection_rect.h = selection_rect.height();
 
-		QPen dot_pen(Qt::DotLine);
-		dot_pen.setColor(Qt::black);
-		painter.setPen(dot_pen);
-		painter.drawRect(selection_rect);
+		// TODO QPen solid_pen(Qt::SolidLine);
+		SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+		SDL_RenderDrawRect(renderer, &r_selection_rect);
+
+		// TODO QPen dot_pen(Qt::DotLine);
+		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+		SDL_RenderDrawRect(renderer, &r_selection_rect);
 	}
 
-	painter.setCompositionMode(QPainter::CompositionMode_Destination);
-	draw_pixel(&painter, leftTop, cursor);
-	drawCursor(&painter, cursorRect);
-	painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+	// TODO painter.setCompositionMode(QPainter::CompositionMode_Destination);
+	draw_pixel(leftTop, cursor);
+	drawCursor(cursorRect);
+	// TODO painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
 
 	QPoint currentColorAreaShift;
+	SDL_Rect palette_rect;
+	palette_rect.x = 0;
+	palette_rect.y = 0;
+	palette_rect.w = 32;
+	palette_rect.h = 32;
 	for(unsigned i = 0; i < canvas.color_count(); ++i) {
-		painter.fillRect(QRect(0, 32 * i, 32, 32), canvas.color(i).argb());
+		palette_rect.y = i * 32;
+		Chthon::Pixmap::Color color = canvas.color(i);
+		SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, 255);
+		SDL_RenderFillRect(renderer, &palette_rect);
 	}
-	painter.drawRect(0, 0, 32, 32 * canvas.color_count());
-	currentColorAreaShift = QPoint(0, color * 32);
-	painter.fillRect(currentColorRect.translated(currentColorAreaShift), Qt::black);
-	painter.setBrush(QColor(indexToRealColor(color).argb()));
-	painter.drawRect(currentColorRect.translated(currentColorAreaShift));
+	SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+	palette_rect.y = 0;
+	palette_rect.w = 32 * canvas.color_count();
+	SDL_RenderDrawRect(renderer, &palette_rect);
 
-	painter.fillRect(colorUnderCursorRect.translated(currentColorAreaShift), Qt::black);
-	painter.setBrush(QColor(indexToRealColor(indexAtPos(cursor)).argb()));
-	painter.drawRect(colorUnderCursorRect.translated(currentColorAreaShift));
+	currentColorRect.y += color * 32;
+	Chthon::Pixmap::Color color_value = canvas.color(color);
+	SDL_SetRenderDrawColor(renderer, color_value.r, color_value.g, color_value.b, 255);
+	SDL_RenderFillRect(renderer, &currentColorRect);
+	SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+	SDL_RenderDrawRect(renderer, &currentColorRect);
 
+	colorUnderCursorRect.y += color * 32;
+	color_value = canvas.color(indexAtPos(cursor));
+	SDL_SetRenderDrawColor(renderer, color_value.r, color_value.g, color_value.b, 255);
+	SDL_RenderFillRect(renderer, &colorUnderCursorRect);
+	SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+	SDL_RenderDrawRect(renderer, &colorUnderCursorRect);
+
+	/* TODO
 	painter.fillRect(QRect(33, 0, width() - 33, 32), Qt::black);
 	switch(mode) {
 		case COLOR_INPUT_MODE:
@@ -539,5 +601,43 @@ void PixelWidget::paintEvent(QPaintEvent*)
 				);
 		break;
 	}
+	*/
 }
 
+int PixelWidget::exec()
+{
+	SDL_Init(SDL_INIT_EVERYTHING);
+	SDL_Window * window = SDL_CreateWindow(
+			"Pixed",
+			SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+			0, 0,
+			SDL_WINDOW_FULLSCREEN_DESKTOP
+			);
+	SDL_ShowCursor(0);
+	rect.x = 0;
+	rect.y = 0;
+	SDL_GetWindowSize(window, &rect.w, &rect.h);
+
+	renderer = SDL_CreateRenderer(window, -1, 0);
+	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+	SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+
+	SDL_Event event;
+	while(!quit) {
+		while(SDL_PollEvent(&event)) {
+			update();
+			SDL_RenderPresent(renderer);
+
+			if(event.type == SDL_KEYDOWN) {
+				keyPressEvent(&event.key);
+			} else if(event.type == SDL_QUIT) {
+				quit = true;
+			}
+		}
+	}
+
+	SDL_DestroyRenderer(renderer);
+	SDL_DestroyWindow(window);
+	SDL_Quit();
+	return 0;
+}

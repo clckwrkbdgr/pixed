@@ -1,17 +1,24 @@
 #pragma once
 #include <chthon/pixmap.h>
-#include <QtGui/QWidget>
+#include <QtCore/QString>
+#include <QtCore/QSize>
+#include <QtCore/QPoint>
+#include <QtCore/QRect>
+#include <SDL2/SDL.h>
 
-class PixelWidget : public QWidget {
-	Q_OBJECT
-	Q_DISABLE_COPY(PixelWidget);
+class PixelWidget {
 public:
-	PixelWidget(const QString & imageFileName, const QSize & newSize = QSize(), QWidget * parent = 0);
+	PixelWidget(const QString & imageFileName, const QSize & newSize = QSize());
 	virtual ~PixelWidget();
+
+	int exec();
 protected:
-	virtual void paintEvent(QPaintEvent*);
-	virtual void keyPressEvent(QKeyEvent*);
+	void update();
+	virtual void keyPressEvent(SDL_KeyboardEvent * event);
+	void close();
 private:
+	SDL_Renderer * renderer;
+	bool quit;
 	int zoomFactor;
 	QPoint canvasShift;
 	QPoint cursor, oldCursor;
@@ -24,6 +31,7 @@ private:
 	bool do_draw_grid;
 	QPoint selection_start;
 	QRect selection;
+	SDL_Rect rect;
 
 	void switch_draw_grid();
 	Chthon::Pixmap::Color indexToRealColor(uint index);
@@ -43,7 +51,8 @@ private:
 	void save();
 	void startCopyMode();
 	void startPasteMode();
-	void drawCursor(QPainter * painter, const QRect & rect);
+	void drawCursor(const QRect & rect);
 	void pasteSelection();
-	void draw_pixel(QPainter * painter, const QPoint & topLeft, const QPoint & pos);
+	void draw_pixel(const QPoint & topLeft, const QPoint & pos);
+	void drawGrid(const QPoint & topLeft);
 };
