@@ -5,12 +5,54 @@
 #include "pixelwidget.h"
 #include <SDL2/SDL.h>
 
+SDL_Texture * create_grid_cell(SDL_Renderer * renderer, int size)
+{
+	SDL_Texture * result = 0;
+	SDL_Surface * surface = SDL_CreateRGBSurface(SDL_SWSURFACE,
+			size, size, 32,
+			0x00ff0000,
+			0x0000ff00,
+			0x000000ff,
+			0xff000000
+			);
+	if(SDL_MUSTLOCK(surface)) {
+		SDL_LockSurface(surface);
+	}
+	SDL_Rect r;
+	r.x = 0;
+	r.y = 0;
+	r.w = size;
+	r.h = size;
+	SDL_FillRect(surface, &r, 0);
+	for(int x = 0; x < size; ++x) {
+		Uint8 * pixel = (Uint8*)surface->pixels;
+		pixel += (0 * surface->pitch) + (x * sizeof(Uint32));
+		*((Uint32*)pixel) = (x % 2 == 0) ? 0xff000000 : 0xffffffff;
+	}
+	for(int y = 0; y < size; ++y) {
+		Uint8 * pixel = (Uint8*)surface->pixels;
+		pixel += (y * surface->pitch) + (0 * sizeof(Uint32));
+		*((Uint32*)pixel) = (y % 2 == 0) ? 0xff000000 : 0xffffffff;
+	}
+	if(SDL_MUSTLOCK(surface)) {
+		SDL_UnlockSurface(surface);
+	}
+	result = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, size, size);
+	SDL_UpdateTexture(result, 0, surface->pixels, surface->pitch);
+	SDL_SetTextureBlendMode(result, SDL_BLENDMODE_BLEND);
+	SDL_FreeSurface(surface);
+	return result;
+}
+
+
+
 const int MIN_ZOOM_FACTOR = 2;
 
 enum { DRAWING_MODE, COLOR_INPUT_MODE, COPY_MODE, PASTE_MODE };
 
 PixelWidget::PixelWidget(const QString & imageFileName, const QSize & newSize)
-	: renderer(0), quit(false), zoomFactor(4), color(0), fileName(imageFileName), canvas(32, 32), mode(DRAWING_MODE), wholeScreenChanged(true), do_draw_grid(false)
+	: renderer(0), quit(false), zoomFactor(4), color(0), fileName(imageFileName), canvas(32, 32), mode(DRAWING_MODE), wholeScreenChanged(true), do_draw_grid(false),
+	grid_cell(0)
 {
 	if(QFile::exists(fileName) && newSize.isNull()) {
 		QFile file(fileName);
@@ -121,7 +163,7 @@ void PixelWidget::keyPressEvent(SDL_KeyboardEvent * event)
 			case SDLK_a: color = canvas.add_color(Chthon::Pixmap::Color()); startColorInput(); break;
 			case SDLK_PAGEUP: pickPrevColor(); break;
 			case SDLK_PAGEDOWN: pickNextColor(); break;
-			case SDLK_HASH: startColorInput(); break;
+			case SDLK_3: if(event->keysym.mod & (KMOD_RSHIFT | KMOD_LSHIFT)) { startColorInput(); } break;
 			case SDLK_PERIOD: takeColorUnderCursor(); break;
 			case SDLK_d: case SDLK_i: case SDLK_SPACE: putColorAtCursor(); break;
 			case SDLK_p: floodFill(); break;
@@ -189,6 +231,12 @@ void PixelWidget::startPasteMode()
 void PixelWidget::switch_draw_grid()
 {
 	do_draw_grid = !do_draw_grid;
+	if(do_draw_grid) {
+		grid_cell = create_grid_cell(renderer, zoomFactor);
+	} else {
+		SDL_DestroyTexture(grid_cell);
+		grid_cell = 0;
+	}
 	wholeScreenChanged = true;
 	update();
 }
@@ -300,6 +348,8 @@ void PixelWidget::centerCanvas()
 void PixelWidget::zoomIn()
 {
 	zoomFactor++;
+	SDL_DestroyTexture(grid_cell);
+	grid_cell = create_grid_cell(renderer, zoomFactor);
 	update();
 }
 
@@ -309,6 +359,8 @@ void PixelWidget::zoomOut()
 	if(zoomFactor < MIN_ZOOM_FACTOR) {
 		zoomFactor = MIN_ZOOM_FACTOR;
 	}
+	SDL_DestroyTexture(grid_cell);
+	grid_cell = create_grid_cell(renderer, zoomFactor);
 	update();
 }
 
@@ -362,34 +414,20 @@ void PixelWidget::drawCursor(const QRect & cursor_rect)
 
 void PixelWidget::drawGrid(const QPoint & topLeft)
 {
-	SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-	for(unsigned x = 1; x < canvas.width(); ++x) {
-		draw_line(renderer,
-				topLeft + QPoint(x * zoomFactor, 0),
-				topLeft + QPoint(x * zoomFactor, canvas.height() * zoomFactor)
-				);
+	if(grid_cell == 0) {
+		return;
 	}
-	for(unsigned y = 1; y < canvas.height(); ++y) {
-		draw_line(renderer,
-				topLeft + QPoint(0, y * zoomFactor),
-				topLeft + QPoint(canvas.width() * zoomFactor, y * zoomFactor)
-				);
-	}
-
-	// TODO QPen pen(Qt::DotLine);
-	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-	for(unsigned x = 1; x < canvas.width(); ++x) {
-		draw_line(renderer,
-				topLeft + QPoint(0, 1) + QPoint(x * zoomFactor, 0),
-				topLeft + QPoint(0, 1) + QPoint(x * zoomFactor, canvas.height() * zoomFactor)
-				);
-	}
-	for(unsigned y = 1; y < canvas.height(); ++y) {
-
-		draw_line(renderer,
-				topLeft + QPoint(1, 0) + QPoint(0, y * zoomFactor),
-				topLeft + QPoint(1, 0) + QPoint(canvas.width() * zoomFactor, y * zoomFactor)
-				);
+	SDL_Rect r;
+	r.x = 0;
+	r.y = 0;
+	r.w = zoomFactor;
+	r.h = zoomFactor;
+	for(unsigned x = 0; x < canvas.width(); ++x) {
+		for(unsigned y = 0; y < canvas.height(); ++y) {
+			r.x = topLeft.x() + x * zoomFactor;
+			r.y = topLeft.y() + y * zoomFactor;
+			SDL_RenderCopy(renderer, grid_cell, 0, &r);
+		}
 	}
 }
 
@@ -425,8 +463,8 @@ void PixelWidget::draw_pixel(const QPoint & topLeft, const QPoint & pos)
 			SDL_Rect r;
 			r.x = q_r.x();
 			r.y = q_r.y();
-			r.w = q_r.width();
-			r.h = q_r.height();
+			r.w = zoomFactor / 2;
+			r.h = zoomFactor / 2;
 
 			SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 			SDL_RenderFillRect(renderer, &r);
@@ -473,17 +511,15 @@ void PixelWidget::update()
 	currentColorRect.w = 32;
 	currentColorRect.h = 32;
 
-	// TODO painter.setBrush(Qt::NoBrush);
-
 	if(wholeScreenChanged) {
 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 		SDL_RenderClear(renderer);
 		SDL_Rect imageRect_adjusted;
 		imageRect_adjusted.x = imageRect.x() - 1;
 		imageRect_adjusted.y = imageRect.y() - 1;
-		imageRect_adjusted.w = imageRect.width();
-		imageRect_adjusted.h = imageRect.height();
-		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+		imageRect_adjusted.w = imageRect.width() + 3;
+		imageRect_adjusted.h = imageRect.height() + 3;
+		SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 		SDL_RenderDrawRect(renderer, &imageRect_adjusted);
 		for(unsigned x = 0; x < canvas.width(); ++x) {
 			for(unsigned y = 0; y < canvas.height(); ++y) {
@@ -581,7 +617,7 @@ void PixelWidget::update()
 	}
 	SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 	palette_rect.y = 0;
-	palette_rect.w = 32 * canvas.color_count();
+	palette_rect.h = 32 * canvas.color_count();
 	SDL_RenderDrawRect(renderer, &palette_rect);
 
 	currentColorRect.y += color * 32;
