@@ -32,7 +32,8 @@ private:
 	QPoint selection_start;
 	QRect selection;
 	SDL_Rect rect;
-	SDL_Texture * grid_cell;
+	SDL_Texture * dot_h;
+	SDL_Texture * dot_v;
 
 	void switch_draw_grid();
 	Chthon::Pixmap::Color indexToRealColor(uint index);
@@ -56,4 +57,5 @@ private:
 	void pasteSelection();
 	void draw_pixel(const QPoint & topLeft, const QPoint & pos);
 	void drawGrid(const QPoint & topLeft);
+	void recreate_dot_textures();
 };

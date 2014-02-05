@@ -5,11 +5,11 @@
 #include "pixelwidget.h"
 #include <SDL2/SDL.h>
 
-SDL_Texture * create_grid_cell(SDL_Renderer * renderer, int size)
+SDL_Texture * create_dotted_texture(SDL_Renderer * renderer, int size, bool is_h)
 {
 	SDL_Texture * result = 0;
 	SDL_Surface * surface = SDL_CreateRGBSurface(SDL_SWSURFACE,
-			size, size, 32,
+			is_h ? size : 1, is_h ? 1 : size, 32,
 			0x00ff0000,
 			0x0000ff00,
 			0x000000ff,
@@ -21,23 +21,18 @@ SDL_Texture * create_grid_cell(SDL_Renderer * renderer, int size)
 	SDL_Rect r;
 	r.x = 0;
 	r.y = 0;
-	r.w = size;
-	r.h = size;
+	r.w = is_h ? size : 1;
+	r.h = is_h ? 1 : size;
 	SDL_FillRect(surface, &r, 0);
 	for(int x = 0; x < size; ++x) {
-		Uint8 * pixel = (Uint8*)surface->pixels;
-		pixel += (0 * surface->pitch) + (x * sizeof(Uint32));
-		*((Uint32*)pixel) = (x % 2 == 0) ? 0xff000000 : 0xffffffff;
-	}
-	for(int y = 0; y < size; ++y) {
-		Uint8 * pixel = (Uint8*)surface->pixels;
-		pixel += (y * surface->pitch) + (0 * sizeof(Uint32));
-		*((Uint32*)pixel) = (y % 2 == 0) ? 0xff000000 : 0xffffffff;
+		Uint32 * pixel = (Uint32*)surface->pixels;
+		pixel += x;
+		*pixel = ((size + x) % 2 == 0) ? 0xff000000 : 0xffffffff;
 	}
 	if(SDL_MUSTLOCK(surface)) {
 		SDL_UnlockSurface(surface);
 	}
-	result = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, size, size);
+	result = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, r.w, r.h);
 	SDL_UpdateTexture(result, 0, surface->pixels, surface->pitch);
 	SDL_SetTextureBlendMode(result, SDL_BLENDMODE_BLEND);
 	SDL_FreeSurface(surface);
@@ -52,7 +47,7 @@ enum { DRAWING_MODE, COLOR_INPUT_MODE, COPY_MODE, PASTE_MODE };
 
 PixelWidget::PixelWidget(const QString & imageFileName, const QSize & newSize)
 	: renderer(0), quit(false), zoomFactor(4), color(0), fileName(imageFileName), canvas(32, 32), mode(DRAWING_MODE), wholeScreenChanged(true), do_draw_grid(false),
-	grid_cell(0)
+	dot_h(0), dot_v(0)
 {
 	if(QFile::exists(fileName) && newSize.isNull()) {
 		QFile file(fileName);
@@ -231,14 +226,21 @@ void PixelWidget::startPasteMode()
 void PixelWidget::switch_draw_grid()
 {
 	do_draw_grid = !do_draw_grid;
-	if(do_draw_grid) {
-		grid_cell = create_grid_cell(renderer, zoomFactor);
-	} else {
-		SDL_DestroyTexture(grid_cell);
-		grid_cell = 0;
-	}
 	wholeScreenChanged = true;
 	update();
+}
+
+void PixelWidget::recreate_dot_textures()
+{
+	if(dot_h) {
+		SDL_DestroyTexture(dot_h);
+	}
+	dot_h = create_dotted_texture(renderer, zoomFactor, true);
+
+	if(dot_v) {
+		SDL_DestroyTexture(dot_v);
+	}
+	dot_v = create_dotted_texture(renderer, zoomFactor, false);
 }
 
 void PixelWidget::floodFill()
@@ -348,8 +350,7 @@ void PixelWidget::centerCanvas()
 void PixelWidget::zoomIn()
 {
 	zoomFactor++;
-	SDL_DestroyTexture(grid_cell);
-	grid_cell = create_grid_cell(renderer, zoomFactor);
+	recreate_dot_textures();
 	update();
 }
 
@@ -359,8 +360,7 @@ void PixelWidget::zoomOut()
 	if(zoomFactor < MIN_ZOOM_FACTOR) {
 		zoomFactor = MIN_ZOOM_FACTOR;
 	}
-	SDL_DestroyTexture(grid_cell);
-	grid_cell = create_grid_cell(renderer, zoomFactor);
+	recreate_dot_textures();
 	update();
 }
 
@@ -389,7 +389,6 @@ void draw_line(SDL_Renderer * renderer, const QPoint & a, const QPoint & b)
 
 void PixelWidget::drawCursor(const QRect & cursor_rect)
 {
-	// TODO painter->setCompositionMode(QPainter::RasterOp_SourceXorDestination);
 	SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 
 	QPoint width = QPoint(cursor_rect.width(), 0);
@@ -408,15 +407,10 @@ void PixelWidget::drawCursor(const QRect & cursor_rect)
 		draw_line(renderer, cursor_rect.topRight() - height, cursor_rect.bottomRight() + height);
 	}
 	SDL_RenderDrawLines(renderer, lines.constData(), lines.count());
-
-	// TODO painter->setCompositionMode(QPainter::CompositionMode_SourceOver);
 }
 
 void PixelWidget::drawGrid(const QPoint & topLeft)
 {
-	if(grid_cell == 0) {
-		return;
-	}
 	SDL_Rect r;
 	r.x = 0;
 	r.y = 0;
@@ -426,7 +420,14 @@ void PixelWidget::drawGrid(const QPoint & topLeft)
 		for(unsigned y = 0; y < canvas.height(); ++y) {
 			r.x = topLeft.x() + x * zoomFactor;
 			r.y = topLeft.y() + y * zoomFactor;
-			SDL_RenderCopy(renderer, grid_cell, 0, &r);
+
+			r.w = zoomFactor;
+			r.h = 1;
+			SDL_RenderCopy(renderer, dot_h, 0, &r);
+
+			r.w = 1;
+			r.h = zoomFactor;
+			SDL_RenderCopy(renderer, dot_v, 0, &r);
 		}
 	}
 }
@@ -583,25 +584,34 @@ void PixelWidget::update()
 		if(selection_rect.isValid()) {
 			selection_rect.setSize(selection_rect.size() - QSize(1, 1));
 		}
-		SDL_Rect r_selection_rect;
-		r_selection_rect.x = selection_rect.x();
-		r_selection_rect.y = selection_rect.y();
-		r_selection_rect.w = selection_rect.width();
-		r_selection_rect.h = selection_rect.height();
 
-		// TODO QPen solid_pen(Qt::SolidLine);
-		SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-		SDL_RenderDrawRect(renderer, &r_selection_rect);
+		SDL_Rect r;
+		r.x = 0;
+		r.y = 0;
+		r.w = zoomFactor;
+		r.h = 1;
+		for(int x = selected_pixels.left(); x <= selected_pixels.right(); ++x) {
+			r.x = leftTop.x() + x * zoomFactor - 1;
+			r.y = leftTop.y() + selected_pixels.top() * zoomFactor - 1;
+			SDL_RenderCopy(renderer, dot_h, 0, &r);
 
-		// TODO QPen dot_pen(Qt::DotLine);
-		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-		SDL_RenderDrawRect(renderer, &r_selection_rect);
+			r.y = leftTop.y() + selected_pixels.bottom() * zoomFactor + zoomFactor - 1;
+			SDL_RenderCopy(renderer, dot_h, 0, &r);
+		}
+		r.w = 1;
+		r.h = zoomFactor;
+		for(int y = selected_pixels.top(); y <= selected_pixels.bottom(); ++y) {
+			r.y = leftTop.y() + y * zoomFactor - 1;
+			r.x = leftTop.x() + selected_pixels.left() * zoomFactor - 1;
+			SDL_RenderCopy(renderer, dot_v, 0, &r);
+
+			r.x = leftTop.x() + selected_pixels.right() * zoomFactor + zoomFactor - 1;
+			SDL_RenderCopy(renderer, dot_v, 0, &r);
+		}
 	}
 
-	// TODO painter.setCompositionMode(QPainter::CompositionMode_Destination);
 	draw_pixel(leftTop, cursor);
 	drawCursor(cursorRect);
-	// TODO painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
 
 	QPoint currentColorAreaShift;
 	SDL_Rect palette_rect;
@@ -668,6 +678,8 @@ int PixelWidget::exec()
 	renderer = SDL_CreateRenderer(window, -1, 0);
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 	SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+
+	recreate_dot_textures();
 
 	SDL_Event event;
 	while(!quit) {
