@@ -432,11 +432,16 @@ std::string colorToString(const Chthon::Pixmap::Color & color)
 		return "None";
 	}
 	std::ostringstream out;
-	out << '#';
-	out.width(2);
+	out << '#' << std::hex;
 	out.fill('0');
-	out << std::hex;
-	out << color.r << color.g << color.b;
+	out.width(2);
+	out << int(color.r);
+	out.fill('0');
+	out.width(2);
+	out << int(color.g);
+	out.fill('0');
+	out.width(2);
+	out << int(color.b);
 	return out.str();
 }
 
