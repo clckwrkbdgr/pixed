@@ -6,7 +6,7 @@ LIBS += -lchthon -lSDL2
 QMAKE_CXXFLAGS += -std=c++0x
 
 SOURCES += main.cpp
-modules = pixelwidget qgetopt font
+modules = pixelwidget font
 
 for(module, modules) {
 	HEADERS += $${module}.h

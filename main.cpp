@@ -1,14 +1,14 @@
 #include "pixelwidget.h"
-#include "qgetopt.h"
 #include <QtCore/QTextStream>
 #include <QtCore/QCoreApplication>
+#include <getopt.h>
 
 struct Options {
 	int width, height;
 	bool hasSize;
 	QString filename;
 	Options() : width(0), height(0), hasSize(false) {}
-	bool parse();
+	bool parse(int argc, char ** argv);
 	bool printUsage();
 };
 
@@ -28,35 +28,53 @@ bool Options::printUsage()
 	return false;
 }
 
-bool Options::parse()
+bool Options::parse(int argc, char ** argv)
 {
-	QGetopt getopt;
-	getopt.addOptionWithArg('w', "width").addOptionWithArg('h', "height");
-	try {
-		getopt.parseApplicationArguments();
-	} catch(QGetopt::GetoptException & e) {
-		return printUsage();
+	static struct option long_options[] = {
+		{"width", required_argument, 0, 'w'},
+		{"height", required_argument, 0, 'h'},
+		{0, 0, 0, 0}
+	};
+	int c;
+	bool has_width = false;
+	bool has_height = false;
+	QString width_string, height_string;
+	while((c = getopt_long(argc, argv, "w:h:", long_options, 0)) != -1) {
+		switch(c) {
+			case 'w':
+				has_width = true;
+				width_string = optarg;
+				break;
+			case 'h':
+				has_height = true;
+				height_string = optarg;
+				break;
+			case '?':
+			default:
+				printUsage();
+				return false;
+		}
 	}
-	bool hasWidthOrHeight = getopt.hasOption('w') || getopt.hasOption('h');
-	hasSize = getopt.hasOption('w') && getopt.hasOption('h');
+	bool hasWidthOrHeight = has_width || has_height;
+	hasSize = has_width && has_height;
 	if(hasWidthOrHeight && !hasSize) {
 		return printUsage();
 	}
 	if(hasSize) {
 		bool ok = false;
-		width = getopt.getArg('w').toInt(&ok);
+		width = width_string.toInt(&ok);
 		if(!ok || width <= 0) {
 			return printUsage();
 		}
-		height = getopt.getArg('h').toInt(&ok);
+		height = height_string.toInt(&ok);
 		if(!ok || height <= 0) {
 			return printUsage();
 		}
 	}
-	if(getopt.getNonArgs().count() < 1) {
+	if((argc - optind) < 1) {
 		return printUsage();
 	}
-	filename = getopt.getNonArgs().first();
+	filename = argv[optind];
 	if(!filename.toLower().endsWith(".xpm")) {
 		return printUsage();
 	}
@@ -70,7 +88,7 @@ int main(int argc, char ** argv)
 	app.setApplicationName("pixed");
 
 	Options options;
-	if(!options.parse()) {
+	if(!options.parse(argc, argv)) {
 		return 1;
 	}
 
