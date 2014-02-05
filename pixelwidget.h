@@ -1,15 +1,12 @@
 #pragma once
 #include "font.h"
 #include <chthon/pixmap.h>
-#include <QtCore/QString>
-#include <QtCore/QSize>
-#include <QtCore/QPoint>
-#include <QtCore/QRect>
+#include <chthon/point.h>
 #include <SDL2/SDL.h>
 
 class PixelWidget {
 public:
-	PixelWidget(const QString & imageFileName, const QSize & newSize = QSize());
+	PixelWidget(const std::string & imageFileName, int width = 0, int height = 0);
 	virtual ~PixelWidget();
 
 	int exec();
@@ -21,17 +18,17 @@ private:
 	SDL_Renderer * renderer;
 	bool quit;
 	int zoomFactor;
-	QPoint canvasShift;
-	QPoint cursor, oldCursor;
+	Chthon::Point canvasShift;
+	Chthon::Point cursor, oldCursor;
 	uint color;
-	QString fileName;
+	std::string fileName;
 	Chthon::Pixmap canvas;
 	int mode;
-	QString colorEntered;
+	std::string colorEntered;
 	bool wholeScreenChanged;
 	bool do_draw_grid;
-	QPoint selection_start;
-	QRect selection;
+	Chthon::Point selection_start;
+	SDL_Rect selection;
 	SDL_Rect rect;
 	SDL_Texture * dot_h;
 	SDL_Texture * dot_v;
@@ -39,13 +36,13 @@ private:
 
 	void switch_draw_grid();
 	Chthon::Pixmap::Color indexToRealColor(uint index);
-	uint indexAtPos(const QPoint & pos);
+	uint indexAtPos(const Chthon::Point & pos);
 	void floodFill();
 	void zoomIn();
 	void zoomOut();
-	void shiftCanvas(const QPoint & shift, int speed = 1);
+	void shiftCanvas(const Chthon::Point & shift, int speed = 1);
 	void centerCanvas();
-	void shiftCursor(const QPoint & shift, int speed = 1);
+	void shiftCursor(const Chthon::Point & shift, int speed = 1);
 	void putColorAtCursor();
 	void takeColorUnderCursor();
 	void startColorInput();
@@ -55,9 +52,9 @@ private:
 	void save();
 	void startCopyMode();
 	void startPasteMode();
-	void drawCursor(const QRect & rect);
+	void drawCursor(const SDL_Rect & rect);
 	void pasteSelection();
-	void draw_pixel(const QPoint & topLeft, const QPoint & pos);
-	void drawGrid(const QPoint & topLeft);
+	void draw_pixel(const Chthon::Point & topLeft, const Chthon::Point & pos);
+	void drawGrid(const Chthon::Point & topLeft);
 	void recreate_dot_textures();
 };

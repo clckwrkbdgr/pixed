@@ -1,9 +1,11 @@
-#include <QtDebug>
-#include <QtCore/QFile>
-#include <QtCore/QTextStream>
-#include <QtCore/QCoreApplication>
 #include "pixelwidget.h"
+#include <chthon/files.h>
 #include <SDL2/SDL.h>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <iomanip>
+#include <streambuf>
 
 SDL_Texture * create_dotted_texture(SDL_Renderer * renderer, int size, bool is_h)
 {
@@ -45,27 +47,25 @@ const int MIN_ZOOM_FACTOR = 2;
 
 enum { DRAWING_MODE, COLOR_INPUT_MODE, COPY_MODE, PASTE_MODE };
 
-PixelWidget::PixelWidget(const QString & imageFileName, const QSize & newSize)
+PixelWidget::PixelWidget(const std::string & imageFileName, int width, int height)
 	: renderer(0), quit(false), zoomFactor(4), color(0), fileName(imageFileName), canvas(32, 32), mode(DRAWING_MODE), wholeScreenChanged(true), do_draw_grid(false),
 	dot_h(0), dot_v(0)
 {
-	if(QFile::exists(fileName) && newSize.isNull()) {
-		QFile file(fileName);
-		QString data;
-		if(file.open(QFile::ReadOnly)) {
-			QTextStream in(&file);
-			data = in.readAll();
+	if(Chthon::file_exists(fileName) && (width == 0 || height == 0)) {
+		std::ifstream file(fileName.c_str());
+		if(file) {
+			std::string data((std::istreambuf_iterator<char>(file)),
+					std::istreambuf_iterator<char>());
 			try {
-				canvas = Chthon::Pixmap(data.toStdString());
+				canvas = Chthon::Pixmap(data);
 			} catch(const Chthon::Pixmap::Exception & e) {
-				QTextStream err(stderr);
-				err << QString::fromStdString(e.what) << endl;
+				std::cerr << e.what << std::endl;
 				exit(1);
 			}
 		}
 	} else {
-		if(!newSize.isNull()) {
-			canvas = Chthon::Pixmap(newSize.width(), newSize.height());
+		if(width != 0 && height != 0) {
+			canvas = Chthon::Pixmap(width, height);
 		}
 	}
 	color = 0;
@@ -84,11 +84,9 @@ void PixelWidget::close()
 
 void PixelWidget::save()
 {
-	QFile file(fileName);
-	if(file.open(QFile::WriteOnly)) {
-		QString data = QString::fromStdString(canvas.save());
-		QTextStream out(&file);
-		out << data;
+	std::ofstream file(fileName.c_str());
+	if(file) {
+		file << canvas.save();
 	}
 }
 
@@ -99,7 +97,7 @@ void PixelWidget::keyPressEvent(SDL_KeyboardEvent * event)
 		switch(event->keysym.sym) {
 			case SDLK_BACKSPACE:
 				if(colorEntered.size() > 1) {
-					colorEntered.remove(colorEntered.size() - 1, 1);
+					colorEntered.erase(colorEntered.size() - 1, 1);
 				}
 				break;
 			case SDLK_RETURN: case SDLK_RETURN2: endColorInput(); break;
@@ -111,7 +109,7 @@ void PixelWidget::keyPressEvent(SDL_KeyboardEvent * event)
 			char c = text[0];
 			if(c == '-') {
 				colorEntered = "-";
-			} else if(QString("0123456789ABCDEFabcdef").contains(c)) {
+			} else if(std::string("0123456789ABCDEFabcdef").find(c) != std::string::npos) {
 				if(colorEntered == "-") {
 					colorEntered = "";
 				}
@@ -122,16 +120,16 @@ void PixelWidget::keyPressEvent(SDL_KeyboardEvent * event)
 		return;
 	}
 
-	QPoint shift;
+	Chthon::Point shift;
 	switch(event->keysym.sym) {
-		case SDLK_k: case SDLK_UP: shift = QPoint(0, -1); break;
-		case SDLK_j: case SDLK_DOWN: shift = QPoint(0, 1); break;
-		case SDLK_h: case SDLK_LEFT: shift = QPoint(-1, 0); break;
-		case SDLK_l: case SDLK_RIGHT: shift = QPoint(1, 0); break;
-		case SDLK_y: shift = QPoint(-1, -1); break;
-		case SDLK_u: shift = QPoint(1, -1); break;
-		case SDLK_b: shift = QPoint(-1, 1); break;
-		case SDLK_n: shift = QPoint(1, 1); break;
+		case SDLK_k: case SDLK_UP: shift = Chthon::Point(0, -1); break;
+		case SDLK_j: case SDLK_DOWN: shift = Chthon::Point(0, 1); break;
+		case SDLK_h: case SDLK_LEFT: shift = Chthon::Point(-1, 0); break;
+		case SDLK_l: case SDLK_RIGHT: shift = Chthon::Point(1, 0); break;
+		case SDLK_y: shift = Chthon::Point(-1, -1); break;
+		case SDLK_u: shift = Chthon::Point(1, -1); break;
+		case SDLK_b: shift = Chthon::Point(-1, 1); break;
+		case SDLK_n: shift = Chthon::Point(1, 1); break;
 
 		case SDLK_q: close(); break;
 		case SDLK_s: if(event->keysym.mod & (KMOD_RSHIFT | KMOD_LSHIFT)) { save(); }; break;
@@ -165,7 +163,7 @@ void PixelWidget::keyPressEvent(SDL_KeyboardEvent * event)
 		}
 	}
 	oldCursor = cursor;
-	if(!shift.isNull()) {
+	if(!shift.null()) {
 		int speed = 1;
 		if(event->keysym.mod & (KMOD_RCTRL | KMOD_LCTRL)) {
 			speed = 10;
@@ -181,18 +179,19 @@ void PixelWidget::keyPressEvent(SDL_KeyboardEvent * event)
 
 void PixelWidget::pasteSelection()
 {
-	selection.setSize(selection.size() + QSize(1, 1));
-	QVector<int> pixels(selection.width() * selection.height());;
-	for(int x = 0; x < selection.width(); ++x) {
-		for(int y = 0; y < selection.height(); ++y) {
-			pixels[x + y * selection.width()] = canvas.pixel(selection.left() + x, selection.top() + y);
+	selection.w += 1;
+	selection.h += 1;
+	std::vector<int> pixels(selection.w * selection.h);;
+	for(int x = 0; x < selection.w; ++x) {
+		for(int y = 0; y < selection.h; ++y) {
+			pixels[x + y * selection.w] = canvas.pixel(selection.x + x, selection.y + y);
 		}
 	}
-	for(int x = 0; x < selection.width(); ++x) {
-		for(int y = 0; y < selection.height(); ++y) {
-			int sx = x + cursor.x();
-			int sy = y + cursor.y();
-			canvas.set_pixel(sx, sy, pixels[x + y * selection.width()]);
+	for(int x = 0; x < selection.w; ++x) {
+		for(int y = 0; y < selection.h; ++y) {
+			int sx = x + cursor.x;
+			int sy = y + cursor.y;
+			canvas.set_pixel(sx, sy, pixels[x + y * selection.w]);
 		}
 	}
 	mode = DRAWING_MODE;
@@ -209,17 +208,11 @@ void PixelWidget::startCopyMode()
 void PixelWidget::startPasteMode()
 {
 	mode = PASTE_MODE;
-	selection = QRect(
-			QPoint(
-				qMin(cursor.x(), selection_start.x()),
-				qMin(cursor.y(), selection_start.y())
-				),
-			QSize(
-				qAbs(cursor.x() - selection_start.x()),
-				qAbs(cursor.y() - selection_start.y())
-				)
-			);
-	cursor = selection.topLeft();
+	selection.x = std::min(cursor.x, selection_start.x);
+	selection.y = std::min(cursor.y, selection_start.y);
+	selection.w = std::abs(cursor.x - selection_start.x);
+	selection.h = std::abs(cursor.y - selection_start.y);
+	cursor = Chthon::Point(selection.x, selection.y);
 	update();
 }
 
@@ -245,7 +238,7 @@ void PixelWidget::recreate_dot_textures()
 
 void PixelWidget::floodFill()
 {
-	canvas.floodfill(cursor.x(), cursor.y(), color);
+	canvas.floodfill(cursor.x, cursor.y, color);
 	update();
 }
 
@@ -281,18 +274,17 @@ void PixelWidget::startColorInput()
 void PixelWidget::endColorInput()
 {
 	mode = DRAWING_MODE;
-	if(colorEntered.startsWith('#')) {
-		colorEntered.remove(0, 1);
+	if(colorEntered.substr(0, 1) == "#") {
+		colorEntered.erase(0, 1);
 	}
 	Chthon::Pixmap::Color value;
 	if(colorEntered == "-") {
 		value = Chthon::Pixmap::Color();
 	} else if(colorEntered.size() % 2 == 0) {
 		if(colorEntered.length() == 6) {
-			bool ok = false;
-			int red = colorEntered.mid(0, 2).toInt(&ok, 16);
-			int green = colorEntered.mid(2, 2).toInt(&ok, 16);
-			int blue = colorEntered.mid(4, 2).toInt(&ok, 16);
+			int red = std::stol(colorEntered.substr(0, 2), nullptr, 16);
+			int green = std::stol(colorEntered.substr(2, 2), nullptr, 16);
+			int blue = std::stol(colorEntered.substr(4, 2), nullptr, 16);
 			value = Chthon::Pixmap::Color(red, green, blue);
 		}
 	}
@@ -303,7 +295,7 @@ void PixelWidget::endColorInput()
 
 void PixelWidget::putColorAtCursor()
 {
-	canvas.set_pixel(cursor.x(), cursor.y(), color);
+	canvas.set_pixel(cursor.x, cursor.y, color);
 	wholeScreenChanged = false;
 	update();
 }
@@ -315,35 +307,35 @@ void PixelWidget::takeColorUnderCursor()
 	update();
 }
 
-void PixelWidget::shiftCanvas(const QPoint & shift, int speed)
+void PixelWidget::shiftCanvas(const Chthon::Point & shift, int speed)
 {
 	canvasShift += shift * speed;
 	update();
 }
 
-void PixelWidget::shiftCursor(const QPoint & shift, int speed)
+void PixelWidget::shiftCursor(const Chthon::Point & shift, int speed)
 {
 	if(speed < 1) {
 		return;
 	}
-	int new_x = cursor.x() + shift.x() * speed;
-	int new_y = cursor.y() + shift.y() * speed;
+	int new_x = cursor.x + shift.x * speed;
+	int new_y = cursor.y + shift.y * speed;
 	if(mode == PASTE_MODE) {
-		new_x = qBound(0, new_x, int(canvas.width()) - selection.width() - 1);
-		new_y = qBound(0, new_y, int(canvas.height()) - selection.height() - 1);
+		new_x = std::max(0, std::min(new_x, int(canvas.width()) - selection.w - 1));
+		new_y = std::max(0, std::min(new_y, int(canvas.height()) - selection.h - 1));
 	} else {
-		new_x = qBound(0, new_x, int(canvas.width()) - 1);
-		new_y = qBound(0, new_y, int(canvas.height()) - 1);
+		new_x = std::max(0, std::min(new_x, int(canvas.width()) - 1));
+		new_y = std::max(0, std::min(new_y, int(canvas.height()) - 1));
 	}
 	oldCursor = cursor;
-	cursor = QPoint(new_x, new_y);
+	cursor = Chthon::Point(new_x, new_y);
 	wholeScreenChanged = false;
 	update();
 }
 
 void PixelWidget::centerCanvas()
 {
-	canvasShift = QPoint();
+	canvasShift = Chthon::Point();
 	update();
 }
 
@@ -364,9 +356,9 @@ void PixelWidget::zoomOut()
 	update();
 }
 
-uint PixelWidget::indexAtPos(const QPoint & pos)
+uint PixelWidget::indexAtPos(const Chthon::Point & pos)
 {
-	return canvas.pixel(pos.x(), pos.y());
+	return canvas.pixel(pos.x, pos.y);
 }
 
 Chthon::Pixmap::Color PixelWidget::indexToRealColor(uint index)
@@ -374,42 +366,44 @@ Chthon::Pixmap::Color PixelWidget::indexToRealColor(uint index)
 	return canvas.color(index);
 }
 
-SDL_Point to_sdl_point(const QPoint & point)
+void draw_line(SDL_Renderer * renderer, const Chthon::Point & a, const Chthon::Point & b)
 {
-	SDL_Point result;
-	result.x = point.x();
-	result.y = point.y();
-	return result;
+	SDL_RenderDrawLine(renderer, a.x, a.y, b.x, b.y);
 }
 
-void draw_line(SDL_Renderer * renderer, const QPoint & a, const QPoint & b)
-{
-	SDL_RenderDrawLine(renderer, a.x(), a.y(), b.x(), b.y());
-}
-
-void PixelWidget::drawCursor(const QRect & cursor_rect)
+void PixelWidget::drawCursor(const SDL_Rect & cursor_rect)
 {
 	SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 
-	QPoint width = QPoint(cursor_rect.width(), 0);
-	QPoint height = QPoint(0, cursor_rect.height());
-	QVector<SDL_Point> lines;
+	Chthon::Point width = Chthon::Point(cursor_rect.w, 0);
+	Chthon::Point height = Chthon::Point(0, cursor_rect.h);
 	if(mode == PASTE_MODE) {
-		QRect selection_rect = QRect(cursor_rect.topLeft(), (selection.size() + QSize(1, 1)) * zoomFactor);
-		draw_line(renderer, selection_rect.topLeft() - width, selection_rect.topRight() + width);
-		draw_line(renderer, selection_rect.bottomLeft() - width, selection_rect.bottomRight() + width);
-		draw_line(renderer, selection_rect.topLeft() - height, selection_rect.bottomLeft() + height);
-		draw_line(renderer, selection_rect.topRight() - height, selection_rect.bottomRight() + height);
+		SDL_Rect selection_rect;
+		selection_rect.x = cursor_rect.x;
+		selection_rect.y = cursor_rect.y;
+		selection_rect.w = (selection.w + 1) * zoomFactor;
+		selection_rect.h = (selection.h + 1) * zoomFactor;
+		Chthon::Point topLeft(selection_rect.x, selection_rect.y);
+		Chthon::Point bottomLeft(selection_rect.x, selection_rect.y + selection_rect.h);
+		Chthon::Point topRight(selection_rect.x + selection_rect.w, selection_rect.y);
+		Chthon::Point bottomRight(selection_rect.x + selection_rect.w, selection_rect.y + selection_rect.h);
+		draw_line(renderer, topLeft - width, topRight + width);
+		draw_line(renderer, bottomLeft - width, bottomRight + width);
+		draw_line(renderer, topLeft - height, bottomLeft + height);
+		draw_line(renderer, topRight - height, bottomRight + height);
 	} else {
-		draw_line(renderer, cursor_rect.topLeft() - width, cursor_rect.topRight() + width);
-		draw_line(renderer, cursor_rect.bottomLeft() - width, cursor_rect.bottomRight() + width);
-		draw_line(renderer, cursor_rect.topLeft() - height, cursor_rect.bottomLeft() + height);
-		draw_line(renderer, cursor_rect.topRight() - height, cursor_rect.bottomRight() + height);
+		Chthon::Point topLeft(cursor_rect.x, cursor_rect.y);
+		Chthon::Point bottomLeft(cursor_rect.x, cursor_rect.y + cursor_rect.h);
+		Chthon::Point topRight(cursor_rect.x + cursor_rect.w, cursor_rect.y);
+		Chthon::Point bottomRight(cursor_rect.x + cursor_rect.w, cursor_rect.y + cursor_rect.h);
+		draw_line(renderer, topLeft - width, topRight + width);
+		draw_line(renderer, bottomLeft - width, bottomRight + width);
+		draw_line(renderer, topLeft - height, bottomLeft + height);
+		draw_line(renderer, topRight - height, bottomRight + height);
 	}
-	SDL_RenderDrawLines(renderer, lines.constData(), lines.count());
 }
 
-void PixelWidget::drawGrid(const QPoint & topLeft)
+void PixelWidget::drawGrid(const Chthon::Point & topLeft)
 {
 	SDL_Rect r;
 	r.x = 0;
@@ -418,8 +412,8 @@ void PixelWidget::drawGrid(const QPoint & topLeft)
 	r.h = zoomFactor;
 	for(unsigned x = 0; x < canvas.width(); ++x) {
 		for(unsigned y = 0; y < canvas.height(); ++y) {
-			r.x = topLeft.x() + x * zoomFactor;
-			r.y = topLeft.y() + y * zoomFactor;
+			r.x = topLeft.x + x * zoomFactor;
+			r.y = topLeft.y + y * zoomFactor;
 
 			r.w = zoomFactor;
 			r.h = 1;
@@ -432,38 +426,38 @@ void PixelWidget::drawGrid(const QPoint & topLeft)
 	}
 }
 
-QString colorToString(const Chthon::Pixmap::Color & color)
+std::string colorToString(const Chthon::Pixmap::Color & color)
 {
 	if(color.transparent) {
 		return "None";
 	}
-	return QString("#%1%2%3").
-		arg(color.r, 2, 16, QChar('0')).
-		arg(color.g, 2, 16, QChar('0')).
-		arg(color.b, 2, 16, QChar('0'))
-		;
+	std::ostringstream out;
+	out << '#';
+	out.width(2);
+	out.fill('0');
+	out << std::hex;
+	out << color.r << color.g << color.b;
+	return out.str();
 }
 
-void PixelWidget::draw_pixel(const QPoint & topLeft, const QPoint & pos)
+void PixelWidget::draw_pixel(const Chthon::Point & topLeft, const Chthon::Point & pos)
 {
-	QSize pixelSize = QSize(zoomFactor + 1, zoomFactor + 1);
-	Chthon::Pixmap::Color color = canvas.color(canvas.pixel(pos.x(), pos.y()));
+	Chthon::Pixmap::Color color = canvas.color(canvas.pixel(pos.x, pos.y));
+	Chthon::Point p = topLeft + pos * zoomFactor;
 	if(color.transparent) {
 		if(zoomFactor % 2 != 0) {
-			QRect q_r = QRect(topLeft + pos * zoomFactor, pixelSize);
 			SDL_Rect r;
-			r.x = q_r.x();
-			r.y = q_r.y();
-			r.w = q_r.width();
-			r.h = q_r.height();
-			int i = (pos.x() + pos.y()) % 2 == 0 ? 0 : 32;
+			r.x = p.x;
+			r.y = p.y;
+			r.w = zoomFactor;
+			r.h = zoomFactor;
+			int i = (pos.x + pos.y) % 2 == 0 ? 0 : 32;
 			SDL_SetRenderDrawColor(renderer, i, i, i, 255);
 			SDL_RenderFillRect(renderer, &r);
 		} else {
-			QRect q_r = QRect(topLeft + pos * zoomFactor, pixelSize / 2);
 			SDL_Rect r;
-			r.x = q_r.x();
-			r.y = q_r.y();
+			r.x = p.x;
+			r.y = p.y;
 			r.w = zoomFactor / 2;
 			r.h = zoomFactor / 2;
 
@@ -481,26 +475,34 @@ void PixelWidget::draw_pixel(const QPoint & topLeft, const QPoint & pos)
 			SDL_RenderFillRect(renderer, &r);
 		}
 	} else {
-		QRect q_r = QRect(topLeft + pos * zoomFactor, pixelSize);
 		SDL_Rect r;
-		r.x = q_r.x();
-		r.y = q_r.y();
-		r.w = q_r.width();
-		r.h = q_r.height();
+		r.x = p.x;
+		r.y = p.y;
+		r.w = zoomFactor;
+		r.h = zoomFactor;
 		SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, 255);
 		SDL_RenderFillRect(renderer, &r);
 	}
 }
 
+SDL_Rect make_rect(const Chthon::Point & p, int width, int height)
+{
+	SDL_Rect result;
+	result.x = p.x;
+	result.y = p.y;
+	result.w = width;
+	result.h = height;
+	return result;
+}
+
 void PixelWidget::update()
 {
-	QPoint canvas_center = QPoint(canvas.width() / 2, canvas.height() / 2);
-	QSize canvas_size = QSize(canvas.width(), canvas.height());
-	QPoint rect_center = QPoint(rect.w / 2, rect.h / 2);
-	QPoint leftTop = rect_center - (canvas_center - canvasShift) * zoomFactor;
-	QRect imageRect = QRect(leftTop, canvas_size * zoomFactor);
-	QRect cursorRect = QRect(leftTop + cursor * zoomFactor, QSize(zoomFactor, zoomFactor));
-	QRect oldCursorRect = QRect(leftTop + oldCursor * zoomFactor, QSize(zoomFactor, zoomFactor));
+	Chthon::Point canvas_center = Chthon::Point(canvas.width() / 2, canvas.height() / 2);
+	Chthon::Point rect_center = Chthon::Point(rect.w / 2, rect.h / 2);
+	Chthon::Point leftTop = rect_center - (canvas_center - canvasShift) * zoomFactor;
+	SDL_Rect imageRect = make_rect(leftTop, canvas.width() * zoomFactor, canvas.height() * zoomFactor);
+	SDL_Rect cursorRect = make_rect(leftTop + cursor * zoomFactor, zoomFactor, zoomFactor);
+	SDL_Rect oldCursorRect = make_rect(leftTop + oldCursor * zoomFactor, zoomFactor, zoomFactor);
 	SDL_Rect colorUnderCursorRect;
 	colorUnderCursorRect.x = 24;
 	colorUnderCursorRect.y = 24;
@@ -516,15 +518,15 @@ void PixelWidget::update()
 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 		SDL_RenderClear(renderer);
 		SDL_Rect imageRect_adjusted;
-		imageRect_adjusted.x = imageRect.x() - 1;
-		imageRect_adjusted.y = imageRect.y() - 1;
-		imageRect_adjusted.w = imageRect.width() + 3;
-		imageRect_adjusted.h = imageRect.height() + 3;
+		imageRect_adjusted.x = imageRect.x - 1;
+		imageRect_adjusted.y = imageRect.y - 1;
+		imageRect_adjusted.w = imageRect.w + 3;
+		imageRect_adjusted.h = imageRect.h + 3;
 		SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 		SDL_RenderDrawRect(renderer, &imageRect_adjusted);
 		for(unsigned x = 0; x < canvas.width(); ++x) {
 			for(unsigned y = 0; y < canvas.height(); ++y) {
-				draw_pixel(leftTop, QPoint(x, y));
+				draw_pixel(leftTop, Chthon::Point(x, y));
 			}
 		}
 	} else {
@@ -534,55 +536,46 @@ void PixelWidget::update()
 
 	// Erase old selection.
 	if(mode == COPY_MODE) {
-		QRect old_selected_pixels = QRect(
-				QPoint(
-					qMin(oldCursor.x(), selection_start.x()),
-					qMin(oldCursor.y(), selection_start.y())
-					),
-				QSize(
-					qAbs(oldCursor.x() - selection_start.x()),
-					qAbs(oldCursor.y() - selection_start.y())
-					)
-				);
-		old_selected_pixels.setWidth(old_selected_pixels.width() + 1);
-		old_selected_pixels.setHeight(old_selected_pixels.height() + 1);
-		for(int x = old_selected_pixels.left(); x <= old_selected_pixels.right(); ++x) {
-			int y = old_selected_pixels.top();
-			draw_pixel(leftTop, QPoint(x, y));
-			y = old_selected_pixels.bottom();
-			draw_pixel(leftTop, QPoint(x, y));
+		SDL_Rect old_selected_pixels;
+		old_selected_pixels.x = std::min(oldCursor.x, selection_start.x);
+		old_selected_pixels.y = std::min(oldCursor.y, selection_start.y);
+		old_selected_pixels.w = std::abs(oldCursor.x - selection_start.x) + 1;
+		old_selected_pixels.h = std::abs(oldCursor.y - selection_start.y) + 1;
+		for(int x = old_selected_pixels.x; x <= old_selected_pixels.x + old_selected_pixels.w; ++x) {
+			int y = old_selected_pixels.y;
+			draw_pixel(leftTop, Chthon::Point(x, y));
+			y = old_selected_pixels.y + old_selected_pixels.h;
+			draw_pixel(leftTop, Chthon::Point(x, y));
 		}
-		for(int y = old_selected_pixels.top(); y <= old_selected_pixels.bottom(); ++y) {
-			int x = old_selected_pixels.left();
-			draw_pixel(leftTop, QPoint(x, y));
-			x = old_selected_pixels.right();
-			draw_pixel(leftTop, QPoint(x, y));
+		for(int y = old_selected_pixels.y; y <= old_selected_pixels.y + old_selected_pixels.h; ++y) {
+			int x = old_selected_pixels.x;
+			draw_pixel(leftTop, Chthon::Point(x, y));
+			x = old_selected_pixels.x + old_selected_pixels.w;
+			draw_pixel(leftTop, Chthon::Point(x, y));
 		}
 	}
 
 	if(do_draw_grid) {
-		drawGrid(imageRect.topLeft());
+		drawGrid(leftTop);
 	}
 
 	if(mode == COPY_MODE || mode == PASTE_MODE) {
-		QRect selected_pixels = (mode == PASTE_MODE) ? selection : QRect(
-				QPoint(
-					qMin(cursor.x(), selection_start.x()),
-					qMin(cursor.y(), selection_start.y())
-					),
-				QSize(
-					qAbs(cursor.x() - selection_start.x()),
-					qAbs(cursor.y() - selection_start.y())
-					)
+		SDL_Rect selected_pixels;
+		if(mode == PASTE_MODE) {
+			selected_pixels = selection;
+		} else {
+			selected_pixels.x = std::min(oldCursor.x, selection_start.x);
+			selected_pixels.y = std::min(oldCursor.y, selection_start.y);
+			selected_pixels.w = std::abs(oldCursor.x - selection_start.x) + 1;
+			selected_pixels.h = std::abs(oldCursor.y - selection_start.y) + 1;
+		}
+		SDL_Rect selection_rect = make_rect(
+				leftTop + Chthon::Point(selected_pixels.x, selected_pixels.y) * zoomFactor,
+				selected_pixels.w * zoomFactor, selected_pixels.h * zoomFactor
 				);
-		selected_pixels.setWidth(selected_pixels.width() + 1);
-		selected_pixels.setHeight(selected_pixels.height() + 1);
-		QRect selection_rect = QRect(
-				leftTop + selected_pixels.topLeft() * zoomFactor,
-				selected_pixels.size() * zoomFactor
-				);
-		if(selection_rect.isValid()) {
-			selection_rect.setSize(selection_rect.size() - QSize(1, 1));
+		if(selection_rect.w > 0 && selection_rect.h > 0) {
+			selection_rect.w -= 1;
+			selection_rect.h -= 1;
 		}
 
 		SDL_Rect r;
@@ -590,22 +583,22 @@ void PixelWidget::update()
 		r.y = 0;
 		r.w = zoomFactor;
 		r.h = 1;
-		for(int x = selected_pixels.left(); x <= selected_pixels.right(); ++x) {
-			r.x = leftTop.x() + x * zoomFactor - 1;
-			r.y = leftTop.y() + selected_pixels.top() * zoomFactor - 1;
+		for(int x = selected_pixels.x; x <= selected_pixels.x + selected_pixels.w; ++x) {
+			r.x = leftTop.x + x * zoomFactor - 1;
+			r.y = leftTop.y + selected_pixels.y * zoomFactor - 1;
 			SDL_RenderCopy(renderer, dot_h, 0, &r);
 
-			r.y = leftTop.y() + selected_pixels.bottom() * zoomFactor + zoomFactor - 1;
+			r.y = leftTop.y + (selected_pixels.y + selected_pixels.h) * zoomFactor + zoomFactor - 1;
 			SDL_RenderCopy(renderer, dot_h, 0, &r);
 		}
 		r.w = 1;
 		r.h = zoomFactor;
-		for(int y = selected_pixels.top(); y <= selected_pixels.bottom(); ++y) {
-			r.y = leftTop.y() + y * zoomFactor - 1;
-			r.x = leftTop.x() + selected_pixels.left() * zoomFactor - 1;
+		for(int y = selected_pixels.y; y <= selected_pixels.y + selected_pixels.h; ++y) {
+			r.y = leftTop.y + y * zoomFactor - 1;
+			r.x = leftTop.x + selected_pixels.x * zoomFactor - 1;
 			SDL_RenderCopy(renderer, dot_v, 0, &r);
 
-			r.x = leftTop.x() + selected_pixels.right() * zoomFactor + zoomFactor - 1;
+			r.x = leftTop.x + (selected_pixels.y + selected_pixels.h) * zoomFactor + zoomFactor - 1;
 			SDL_RenderCopy(renderer, dot_v, 0, &r);
 		}
 	}
@@ -613,7 +606,7 @@ void PixelWidget::update()
 	draw_pixel(leftTop, cursor);
 	drawCursor(cursorRect);
 
-	QPoint currentColorAreaShift;
+	Chthon::Point currentColorAreaShift;
 	SDL_Rect palette_rect;
 	palette_rect.x = 0;
 	palette_rect.y = 0;
@@ -652,7 +645,7 @@ void PixelWidget::update()
 	text_rect.h = 32;
 	SDL_RenderFillRect(renderer, &text_rect);
 
-	QString line;
+	std::string line;
 	switch(mode) {
 		case COLOR_INPUT_MODE:
 			line = colorEntered;
@@ -668,7 +661,7 @@ void PixelWidget::update()
 	dest_rect.w = font.getCharRect(0).w;
 	dest_rect.h = font.getCharRect(0).h;
 
-	for(const char & ch : line.toStdString()) {
+	for(const char & ch : line) {
 		SDL_Rect char_rect = font.getCharRect(ch);
 		SDL_RenderCopy(renderer, font.getFont(), &char_rect, &dest_rect);
 		dest_rect.x += dest_rect.w;

@@ -1,5 +1,5 @@
 OBJECTS_DIR = tmp
-QT -= gui
+QT -= gui core
 MOC_DIR = tmp
 UI_DIR = tmp
 LIBS += -lchthon -lSDL2
