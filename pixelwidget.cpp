@@ -644,21 +644,35 @@ void PixelWidget::update()
 	SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 	SDL_RenderDrawRect(renderer, &colorUnderCursorRect);
 
-	/* TODO
-	painter.fillRect(QRect(33, 0, width() - 33, 32), Qt::black);
+	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+	SDL_Rect text_rect;
+	text_rect.x = 33;
+	text_rect.y = 0;
+	text_rect.w = rect.w - 33;
+	text_rect.h = 32;
+	SDL_RenderFillRect(renderer, &text_rect);
+
+	QString line;
 	switch(mode) {
 		case COLOR_INPUT_MODE:
-		painter.drawText(QPoint(32, 32) + QPoint(5, -5), colorEntered);
-		break;
-
+			line = colorEntered;
+			break;
 		case DRAWING_MODE:
-		painter.drawText(
-				QPoint(32, 32) + QPoint(5, -5),
-				colorToString(indexToRealColor(color)) + " [" + colorToString(indexToRealColor(indexAtPos(cursor))) + "]"
-				);
-		break;
+			line = colorToString(indexToRealColor(color)) + " [" + colorToString(indexToRealColor(indexAtPos(cursor))) + "]";
+			break;
 	}
-	*/
+
+	SDL_Rect dest_rect;
+	dest_rect.x = 33;
+	dest_rect.y = 2;
+	dest_rect.w = font.getCharRect(0).w;
+	dest_rect.h = font.getCharRect(0).h;
+
+	for(const char & ch : line.toStdString()) {
+		SDL_Rect char_rect = font.getCharRect(ch);
+		SDL_RenderCopy(renderer, font.getFont(), &char_rect, &dest_rect);
+		dest_rect.x += dest_rect.w;
+	}
 }
 
 int PixelWidget::exec()
@@ -679,6 +693,7 @@ int PixelWidget::exec()
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 	SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
+	font.init(renderer);
 	recreate_dot_textures();
 
 	SDL_Event event;

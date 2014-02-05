@@ -1,4 +1,5 @@
 #pragma once
+#include "font.h"
 #include <chthon/pixmap.h>
 #include <QtCore/QString>
 #include <QtCore/QSize>
@@ -34,6 +35,7 @@ private:
 	SDL_Rect rect;
 	SDL_Texture * dot_h;
 	SDL_Texture * dot_v;
+	Font font;
 
 	void switch_draw_grid();
 	Chthon::Pixmap::Color indexToRealColor(uint index);
