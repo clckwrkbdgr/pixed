@@ -3,6 +3,5 @@
 
 # Build
 pixed
-Makefile
 *.o
 tmp/
