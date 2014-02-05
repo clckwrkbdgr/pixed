@@ -539,8 +539,8 @@ void PixelWidget::update()
 		SDL_Rect old_selected_pixels;
 		old_selected_pixels.x = std::min(oldCursor.x, selection_start.x);
 		old_selected_pixels.y = std::min(oldCursor.y, selection_start.y);
-		old_selected_pixels.w = std::abs(oldCursor.x - selection_start.x) + 1;
-		old_selected_pixels.h = std::abs(oldCursor.y - selection_start.y) + 1;
+		old_selected_pixels.w = std::abs(oldCursor.x - selection_start.x);
+		old_selected_pixels.h = std::abs(oldCursor.y - selection_start.y);
 		for(int x = old_selected_pixels.x; x <= old_selected_pixels.x + old_selected_pixels.w; ++x) {
 			int y = old_selected_pixels.y;
 			draw_pixel(leftTop, Chthon::Point(x, y));
@@ -564,10 +564,10 @@ void PixelWidget::update()
 		if(mode == PASTE_MODE) {
 			selected_pixels = selection;
 		} else {
-			selected_pixels.x = std::min(oldCursor.x, selection_start.x);
-			selected_pixels.y = std::min(oldCursor.y, selection_start.y);
-			selected_pixels.w = std::abs(oldCursor.x - selection_start.x) + 1;
-			selected_pixels.h = std::abs(oldCursor.y - selection_start.y) + 1;
+			selected_pixels.x = std::min(cursor.x, selection_start.x);
+			selected_pixels.y = std::min(cursor.y, selection_start.y);
+			selected_pixels.w = std::abs(cursor.x - selection_start.x);
+			selected_pixels.h = std::abs(cursor.y - selection_start.y);
 		}
 		SDL_Rect selection_rect = make_rect(
 				leftTop + Chthon::Point(selected_pixels.x, selected_pixels.y) * zoomFactor,
@@ -598,7 +598,7 @@ void PixelWidget::update()
 			r.x = leftTop.x + selected_pixels.x * zoomFactor - 1;
 			SDL_RenderCopy(renderer, dot_v, 0, &r);
 
-			r.x = leftTop.x + (selected_pixels.y + selected_pixels.h) * zoomFactor + zoomFactor - 1;
+			r.x = leftTop.x + (selected_pixels.x + selected_pixels.w) * zoomFactor + zoomFactor - 1;
 			SDL_RenderCopy(renderer, dot_v, 0, &r);
 		}
 	}
