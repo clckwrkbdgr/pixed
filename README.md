@@ -32,6 +32,10 @@ Controls
 **.** - pick color at current position as current color.  
 **PgUp/PgDown** - scroll through palette colors.  
 **\#** - start color input mode (see below).  
+**A** - add new color to palette (starts color input mode immediately).
+**C** - start selection mode - Copy step (see below).
+**V** - start selection mode - Paste step (see below).
+**Esc** - breaks color input or selection mode and returns to drawing.
 
 Color input mode
 ----------------
@@ -40,3 +44,8 @@ After pressing '#' key this symbol will be displayed to the right of the current
 Editing finished when either Enter or Esc keys are pressed. In latter case, color input is cancelled.
 If entered value is '-', color is considered to be fully transparent ("None" color).
 Entered color will replace current color of palette, resulting in immediate repainting that color everywhere on the image.
+
+Selection mode
+--------------
+
+This mode allows to copy and paste rectangular part of the canvas. Mode divides into two step: Copy and Paste. In Copy mode user selects area to copy. Area lays between two point - one is the cursor position where **C** key was pressed, and the other one is the current cursor position. After area needed is selected, pressing **V** begins a Paste mode. In Paste mode user chooses position where to paste selected pixels and presses **Enter**. Pixels are pasted as-is, i.e. no alpha blending is done.
