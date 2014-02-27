@@ -1,6 +1,6 @@
 #include "font.h"
-#include <chthon/pixmap.h>
-#include <chthon/util.h>
+#include <chthon2/pixmap.h>
+#include <chthon2/util.h>
 #include <SDL2/SDL.h>
 #include <iostream>
 using namespace Chthon;
@@ -15,9 +15,10 @@ SDL_Texture * Sprite::load(SDL_Renderer * renderer, const char ** xpm, int size)
 	SDL_Texture * result = 0;
 	try {
 		std::vector<std::string> xpm_lines(xpm, xpm + size);
-		Chthon::Pixmap pixmap(xpm_lines);
+		Chthon::Pixmap pixmap;
+		pixmap.load(xpm_lines);
 		SDL_Surface * surface = SDL_CreateRGBSurface(SDL_SWSURFACE,
-				pixmap.width(), pixmap.height(), 32,
+				pixmap.pixels.width(), pixmap.pixels.height(), 32,
 				0x00ff0000,
 				0x0000ff00,
 				0x000000ff,
@@ -26,18 +27,18 @@ SDL_Texture * Sprite::load(SDL_Renderer * renderer, const char ** xpm, int size)
 		if(SDL_MUSTLOCK(surface)) {
 			SDL_LockSurface(surface);
 		}
-		for(unsigned x = 0; x < pixmap.width(); ++x) {
-			for(unsigned y = 0; y < pixmap.height(); ++y) {
+		for(unsigned x = 0; x < pixmap.pixels.width(); ++x) {
+			for(unsigned y = 0; y < pixmap.pixels.height(); ++y) {
 				Uint8 * pixel = (Uint8*)surface->pixels;
 				pixel += (y * surface->pitch) + (x * sizeof(Uint32));
-				Uint32 c = pixmap.color(pixmap.pixel(x, y)).argb();
+				Uint32 c = pixmap.palette[pixmap.pixels.cell(x, y)];
 				*((Uint32*)pixel) = c;
 			}
 		}
 		if(SDL_MUSTLOCK(surface)) {
 			SDL_UnlockSurface(surface);
 		}
-		result = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, pixmap.width(), pixmap.height());
+		result = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, pixmap.pixels.width(), pixmap.pixels.height());
 		SDL_UpdateTexture(result, 0, surface->pixels, surface->pitch);
 		SDL_SetTextureBlendMode(result, SDL_BLENDMODE_BLEND);
 	} catch(const Chthon::Pixmap::Exception & e) {

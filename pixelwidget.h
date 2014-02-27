@@ -1,7 +1,7 @@
 #pragma once
 #include "font.h"
-#include <chthon/pixmap.h>
-#include <chthon/point.h>
+#include <chthon2/pixmap.h>
+#include <chthon2/point.h>
 #include <SDL2/SDL.h>
 
 class PixelWidget {
@@ -35,7 +35,7 @@ private:
 	Font font;
 
 	void switch_draw_grid();
-	Chthon::Pixmap::Color indexToRealColor(uint index);
+	Chthon::Color indexToRealColor(uint index);
 	uint indexAtPos(const Chthon::Point & pos);
 	void floodFill();
 	void zoomIn();

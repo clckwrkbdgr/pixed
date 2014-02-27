@@ -1,5 +1,5 @@
 BIN = pixed
-LIBS = -lSDL2 -lchthon
+LIBS = -lSDL2 -lchthon2
 
 SOURCES = $(wildcard *.cpp)
 
@@ -8,6 +8,9 @@ OBJ = $(addprefix tmp/,$(SOURCES:.cpp=.o))
 CXXFLAGS = -MD -MP -std=c++0x $(WARNINGS)
 
 all: $(BIN)
+
+run: all
+	./pixed test.xpm
 
 $(BIN): $(OBJ) $(APP_OBJ)
 	$(CXX) $(LIBS) -o $@ $^

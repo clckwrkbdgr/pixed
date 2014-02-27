@@ -1,5 +1,6 @@
 #include "pixelwidget.h"
-#include <chthon/files.h>
+#include <chthon2/files.h>
+#include <chthon2/log.h>
 #include <SDL2/SDL.h>
 #include <iostream>
 #include <fstream>
@@ -57,7 +58,7 @@ PixelWidget::PixelWidget(const std::string & imageFileName, int width, int heigh
 			std::string data((std::istreambuf_iterator<char>(file)),
 					std::istreambuf_iterator<char>());
 			try {
-				canvas = Chthon::Pixmap(data);
+				canvas.load(data);
 			} catch(const Chthon::Pixmap::Exception & e) {
 				std::cerr << e.what << std::endl;
 				exit(1);
@@ -85,9 +86,11 @@ void PixelWidget::close()
 void PixelWidget::save()
 {
 	std::ofstream file(fileName.c_str());
-	if(file) {
-		file << canvas.save();
-	}
+	std::string data = canvas.save();
+	TRACE(data);
+	//if(file.good()) {
+		file << data;
+	//}
 }
 
 void PixelWidget::keyPressEvent(SDL_KeyboardEvent * event)
@@ -153,7 +156,7 @@ void PixelWidget::keyPressEvent(SDL_KeyboardEvent * event)
 	} else if(mode == DRAWING_MODE) {
 		switch(event->keysym.sym) {
 			case SDLK_c: startCopyMode(); break;
-			case SDLK_a: color = canvas.add_color(Chthon::Pixmap::Color()); startColorInput(); break;
+			case SDLK_a: color = canvas.palette.size(); canvas.palette.push_back(0); startColorInput(); break;
 			case SDLK_PAGEUP: pickPrevColor(); break;
 			case SDLK_PAGEDOWN: pickNextColor(); break;
 			case SDLK_3: if(event->keysym.mod & (KMOD_RSHIFT | KMOD_LSHIFT)) { startColorInput(); } break;
@@ -184,14 +187,14 @@ void PixelWidget::pasteSelection()
 	std::vector<int> pixels(selection.w * selection.h);;
 	for(int x = 0; x < selection.w; ++x) {
 		for(int y = 0; y < selection.h; ++y) {
-			pixels[x + y * selection.w] = canvas.pixel(selection.x + x, selection.y + y);
+			pixels[x + y * selection.w] = canvas.pixels.cell(selection.x + x, selection.y + y);
 		}
 	}
 	for(int x = 0; x < selection.w; ++x) {
 		for(int y = 0; y < selection.h; ++y) {
 			int sx = x + cursor.x;
 			int sy = y + cursor.y;
-			canvas.set_pixel(sx, sy, pixels[x + y * selection.w]);
+			canvas.pixels.cell(sx, sy) = pixels[x + y * selection.w];
 		}
 	}
 	mode = DRAWING_MODE;
@@ -238,14 +241,14 @@ void PixelWidget::recreate_dot_textures()
 
 void PixelWidget::floodFill()
 {
-	canvas.floodfill(cursor.x, cursor.y, color);
+	canvas.pixels.floodfill(cursor.x, cursor.y, color);
 	update();
 }
 
 void PixelWidget::pickNextColor()
 {
 	unsigned newColor = color + 1;
-	if(newColor >= canvas.color_count()) {
+	if(newColor >= canvas.palette.size()) {
 		return;
 	}
 	color = newColor;
@@ -277,25 +280,25 @@ void PixelWidget::endColorInput()
 	if(colorEntered.substr(0, 1) == "#") {
 		colorEntered.erase(0, 1);
 	}
-	Chthon::Pixmap::Color value;
+	Chthon::Color value;
 	if(colorEntered == "-") {
-		value = Chthon::Pixmap::Color();
+		value = Chthon::Color();
 	} else if(colorEntered.size() % 2 == 0) {
 		if(colorEntered.length() == 6) {
 			int red = std::stol(colorEntered.substr(0, 2), nullptr, 16);
 			int green = std::stol(colorEntered.substr(2, 2), nullptr, 16);
 			int blue = std::stol(colorEntered.substr(4, 2), nullptr, 16);
-			value = Chthon::Pixmap::Color(red, green, blue);
+			value = Chthon::from_rgb(red, green, blue);
 		}
 	}
-	canvas.set_color(color, value);
+	canvas.palette[color] = value;
 	wholeScreenChanged = true;
 	update();
 }
 
 void PixelWidget::putColorAtCursor()
 {
-	canvas.set_pixel(cursor.x, cursor.y, color);
+	canvas.pixels.cell(cursor.x, cursor.y) = color;
 	wholeScreenChanged = false;
 	update();
 }
@@ -321,11 +324,11 @@ void PixelWidget::shiftCursor(const Chthon::Point & shift, int speed)
 	int new_x = cursor.x + shift.x * speed;
 	int new_y = cursor.y + shift.y * speed;
 	if(mode == PASTE_MODE) {
-		new_x = std::max(0, std::min(new_x, int(canvas.width()) - selection.w - 1));
-		new_y = std::max(0, std::min(new_y, int(canvas.height()) - selection.h - 1));
+		new_x = std::max(0, std::min(new_x, int(canvas.pixels.width()) - selection.w - 1));
+		new_y = std::max(0, std::min(new_y, int(canvas.pixels.height()) - selection.h - 1));
 	} else {
-		new_x = std::max(0, std::min(new_x, int(canvas.width()) - 1));
-		new_y = std::max(0, std::min(new_y, int(canvas.height()) - 1));
+		new_x = std::max(0, std::min(new_x, int(canvas.pixels.width()) - 1));
+		new_y = std::max(0, std::min(new_y, int(canvas.pixels.height()) - 1));
 	}
 	oldCursor = cursor;
 	cursor = Chthon::Point(new_x, new_y);
@@ -358,12 +361,12 @@ void PixelWidget::zoomOut()
 
 uint PixelWidget::indexAtPos(const Chthon::Point & pos)
 {
-	return canvas.pixel(pos.x, pos.y);
+	return canvas.pixels.cell(pos.x, pos.y);
 }
 
-Chthon::Pixmap::Color PixelWidget::indexToRealColor(uint index)
+Chthon::Color PixelWidget::indexToRealColor(uint index)
 {
-	return canvas.color(index);
+	return canvas.palette[index];
 }
 
 void draw_line(SDL_Renderer * renderer, const Chthon::Point & a, const Chthon::Point & b)
@@ -410,8 +413,8 @@ void PixelWidget::drawGrid(const Chthon::Point & topLeft)
 	r.y = 0;
 	r.w = zoomFactor;
 	r.h = zoomFactor;
-	for(unsigned x = 0; x < canvas.width(); ++x) {
-		for(unsigned y = 0; y < canvas.height(); ++y) {
+	for(unsigned x = 0; x < canvas.pixels.width(); ++x) {
+		for(unsigned y = 0; y < canvas.pixels.height(); ++y) {
 			r.x = topLeft.x + x * zoomFactor;
 			r.y = topLeft.y + y * zoomFactor;
 
@@ -426,30 +429,30 @@ void PixelWidget::drawGrid(const Chthon::Point & topLeft)
 	}
 }
 
-std::string colorToString(const Chthon::Pixmap::Color & color)
+std::string colorToString(const Chthon::Color & color)
 {
-	if(color.transparent) {
+	if(Chthon::is_transparent(color)) {
 		return "None";
 	}
 	std::ostringstream out;
 	out << '#' << std::hex;
 	out.fill('0');
 	out.width(2);
-	out << int(color.r);
+	out << Chthon::get_red(color);
 	out.fill('0');
 	out.width(2);
-	out << int(color.g);
+	out << Chthon::get_green(color);
 	out.fill('0');
 	out.width(2);
-	out << int(color.b);
+	out << Chthon::get_blue(color);
 	return out.str();
 }
 
 void PixelWidget::draw_pixel(const Chthon::Point & topLeft, const Chthon::Point & pos)
 {
-	Chthon::Pixmap::Color color = canvas.color(canvas.pixel(pos.x, pos.y));
+	Chthon::Color color = canvas.palette[canvas.pixels.cell(pos.x, pos.y)];
 	Chthon::Point p = topLeft + pos * zoomFactor;
-	if(color.transparent) {
+	if(Chthon::is_transparent(color)) {
 		if(zoomFactor % 2 != 0) {
 			SDL_Rect r;
 			r.x = p.x;
@@ -485,7 +488,7 @@ void PixelWidget::draw_pixel(const Chthon::Point & topLeft, const Chthon::Point 
 		r.y = p.y;
 		r.w = zoomFactor;
 		r.h = zoomFactor;
-		SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, 255);
+		SDL_SetRenderDrawColor(renderer, Chthon::get_red(color), Chthon::get_green(color), Chthon::get_blue(color), 255);
 		SDL_RenderFillRect(renderer, &r);
 	}
 }
@@ -502,10 +505,10 @@ SDL_Rect make_rect(const Chthon::Point & p, int width, int height)
 
 void PixelWidget::update()
 {
-	Chthon::Point canvas_center = Chthon::Point(canvas.width() / 2, canvas.height() / 2);
+	Chthon::Point canvas_center = Chthon::Point(canvas.pixels.width() / 2, canvas.pixels.height() / 2);
 	Chthon::Point rect_center = Chthon::Point(rect.w / 2, rect.h / 2);
 	Chthon::Point leftTop = rect_center - (canvas_center - canvasShift) * zoomFactor;
-	SDL_Rect imageRect = make_rect(leftTop, canvas.width() * zoomFactor, canvas.height() * zoomFactor);
+	SDL_Rect imageRect = make_rect(leftTop, canvas.pixels.width() * zoomFactor, canvas.pixels.height() * zoomFactor);
 	SDL_Rect cursorRect = make_rect(leftTop + cursor * zoomFactor, zoomFactor, zoomFactor);
 	SDL_Rect oldCursorRect = make_rect(leftTop + oldCursor * zoomFactor, zoomFactor, zoomFactor);
 	SDL_Rect colorUnderCursorRect;
@@ -529,8 +532,8 @@ void PixelWidget::update()
 		imageRect_adjusted.h = imageRect.h + 3;
 		SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 		SDL_RenderDrawRect(renderer, &imageRect_adjusted);
-		for(unsigned x = 0; x < canvas.width(); ++x) {
-			for(unsigned y = 0; y < canvas.height(); ++y) {
+		for(unsigned x = 0; x < canvas.pixels.width(); ++x) {
+			for(unsigned y = 0; y < canvas.pixels.height(); ++y) {
 				draw_pixel(leftTop, Chthon::Point(x, y));
 			}
 		}
@@ -617,27 +620,27 @@ void PixelWidget::update()
 	palette_rect.y = 0;
 	palette_rect.w = 32;
 	palette_rect.h = 32;
-	for(unsigned i = 0; i < canvas.color_count(); ++i) {
+	for(unsigned i = 0; i < canvas.palette.size(); ++i) {
 		palette_rect.y = i * 32;
-		Chthon::Pixmap::Color color = canvas.color(i);
-		SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, 255);
+		Chthon::Color color = canvas.palette[i];
+		SDL_SetRenderDrawColor(renderer, Chthon::get_red(color), Chthon::get_green(color), Chthon::get_blue(color), 255);
 		SDL_RenderFillRect(renderer, &palette_rect);
 	}
 	SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 	palette_rect.y = 0;
-	palette_rect.h = 32 * canvas.color_count();
+	palette_rect.h = 32 * canvas.palette.size();
 	SDL_RenderDrawRect(renderer, &palette_rect);
 
 	currentColorRect.y += color * 32;
-	Chthon::Pixmap::Color color_value = canvas.color(color);
-	SDL_SetRenderDrawColor(renderer, color_value.r, color_value.g, color_value.b, 255);
+	Chthon::Color color_value = canvas.palette[color];
+	SDL_SetRenderDrawColor(renderer, Chthon::get_red(color), Chthon::get_green(color), Chthon::get_blue(color), 255);
 	SDL_RenderFillRect(renderer, &currentColorRect);
 	SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 	SDL_RenderDrawRect(renderer, &currentColorRect);
 
 	colorUnderCursorRect.y += color * 32;
-	color_value = canvas.color(indexAtPos(cursor));
-	SDL_SetRenderDrawColor(renderer, color_value.r, color_value.g, color_value.b, 255);
+	color_value = canvas.palette[indexAtPos(cursor)];
+	SDL_SetRenderDrawColor(renderer, Chthon::get_red(color), Chthon::get_green(color), Chthon::get_blue(color), 255);
 	SDL_RenderFillRect(renderer, &colorUnderCursorRect);
 	SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 	SDL_RenderDrawRect(renderer, &colorUnderCursorRect);
