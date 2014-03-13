@@ -86,11 +86,9 @@ void PixelWidget::close()
 void PixelWidget::save()
 {
 	std::ofstream file(fileName.c_str());
-	std::string data = canvas.save();
-	TRACE(data);
-	//if(file.good()) {
-		file << data;
-	//}
+	if(file.good()) {
+		file << canvas.save();
+	}
 }
 
 void PixelWidget::keyPressEvent(SDL_KeyboardEvent * event)
@@ -434,18 +432,11 @@ std::string colorToString(const Chthon::Color & color)
 	if(Chthon::is_transparent(color)) {
 		return "None";
 	}
-	std::ostringstream out;
-	out << '#' << std::hex;
-	out.fill('0');
-	out.width(2);
-	out << Chthon::get_red(color);
-	out.fill('0');
-	out.width(2);
-	out << Chthon::get_green(color);
-	out.fill('0');
-	out.width(2);
-	out << Chthon::get_blue(color);
-	return out.str();
+	return Chthon::format("#{0:#02}{1:#02}{2:#02}",
+			Chthon::get_red(color),
+			Chthon::get_green(color),
+			Chthon::get_blue(color)
+			);
 }
 
 void PixelWidget::draw_pixel(const Chthon::Point & topLeft, const Chthon::Point & pos)
