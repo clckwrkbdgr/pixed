@@ -1,7 +1,18 @@
 pixed
 =====
 
-Simple pixel editor
+Simple pixel editor for XPM files.
+Editor designed specifically to preserve XPM file formatting upon rewriting inlcuding whitspaces and comments.
+
+Installation
+------------
+
+Requirements:
+
+* SDL2 library.
+* [libchton](https://github.com/umi0451/libchthon)
+
+Simply run `make` and put created `pixed` file to wherever you want.
 
 Usage
 -----
