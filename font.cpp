@@ -6,7 +6,7 @@
 using namespace Chthon;
 
 namespace Sprite {
-#include "font.xpm"
+#include "res/font.xpm"
 SDL_Texture * load(SDL_Renderer * renderer, const char ** xpm, int size);
 }
 
