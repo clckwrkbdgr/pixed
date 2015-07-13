@@ -138,6 +138,15 @@ void PixelWidget::keyPressEvent(SDL_KeyboardEvent * event)
 		case SDLK_EQUALS: case SDLK_KP_PLUS:  case SDLK_PLUS: zoomIn(); break;
 		case SDLK_KP_MINUS: case SDLK_MINUS: zoomOut(); break;
 		case SDLK_HOME: centerCanvas(); break;
+		case SDLK_f:
+		{
+			if(SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN_DESKTOP) {
+				SDL_SetWindowFullscreen(window, 0);
+			} else {
+				SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+			}
+			break;
+		}
 	}
 	if(mode == COPY_MODE) {
 		switch(event->keysym.sym) {
@@ -670,11 +679,11 @@ void PixelWidget::update()
 int PixelWidget::exec()
 {
 	SDL_Init(SDL_INIT_EVERYTHING);
-	SDL_Window * window = SDL_CreateWindow(
+	window = SDL_CreateWindow(
 			"Pixed",
 			SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-			0, 0,
-			SDL_WINDOW_FULLSCREEN_DESKTOP
+			640, 480,
+			0
 			);
 	SDL_ShowCursor(0);
 	rect.x = 0;

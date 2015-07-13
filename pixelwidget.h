@@ -15,6 +15,7 @@ protected:
 	virtual void keyPressEvent(SDL_KeyboardEvent * event);
 	void close();
 private:
+	SDL_Window * window;
 	SDL_Renderer * renderer;
 	bool quit;
 	int zoomFactor;

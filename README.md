@@ -46,6 +46,7 @@ Controls
 **A** - add new color to palette (starts color input mode immediately).  
 **C** - start selection mode - Copy step (see below).  
 **V** - start selection mode - Paste step (see below).  
+**F** - toggle fullscreen mode on/off (default is windowed).
 **Esc** - breaks color input or selection mode and returns to drawing.  
 
 Color input mode
