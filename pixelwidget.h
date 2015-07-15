@@ -13,6 +13,7 @@ public:
 protected:
 	void update();
 	virtual void keyPressEvent(SDL_KeyboardEvent * event);
+	virtual void mousePressEvent(int x, int y);
 	void close();
 private:
 	SDL_Window * window;

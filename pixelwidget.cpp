@@ -91,6 +91,31 @@ void PixelWidget::save()
 	}
 }
 
+void PixelWidget::mousePressEvent(int x, int y)
+{
+	if(mode == COLOR_INPUT_MODE) {
+		return;
+	}
+
+	Chthon::Point canvas_center = Chthon::Point(canvas.pixels.width() / 2, canvas.pixels.height() / 2);
+	Chthon::Point rect_center = Chthon::Point(rect.w / 2, rect.h / 2);
+	Chthon::Point leftTop = rect_center - (canvas_center - canvasShift) * zoomFactor;
+	Chthon::Point new_cursor = Chthon::Point(
+			(x - leftTop.x) / zoomFactor,
+			(y - leftTop.y) / zoomFactor
+			);
+
+	Chthon::Point shift = new_cursor - cursor;
+	oldCursor = cursor;
+	if(!shift.null()) {
+		shiftCursor(shift, 1);
+	}
+	
+	putColorAtCursor();
+
+	update();
+}
+
 void PixelWidget::keyPressEvent(SDL_KeyboardEvent * event)
 {
 	if(mode == COLOR_INPUT_MODE) {
@@ -685,7 +710,6 @@ int PixelWidget::exec()
 			640, 480,
 			0
 			);
-	SDL_ShowCursor(0);
 	rect.x = 0;
 	rect.y = 0;
 	SDL_GetWindowSize(window, &rect.w, &rect.h);
@@ -705,6 +729,10 @@ int PixelWidget::exec()
 
 			if(event.type == SDL_KEYDOWN) {
 				keyPressEvent(&event.key);
+			} else if(event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT) {
+				mousePressEvent(event.button.x, event.button.y);
+			} else if(event.type == SDL_MOUSEMOTION && event.motion.state && SDL_BUTTON_LMASK) {
+				mousePressEvent(event.motion.x, event.motion.y);
 			} else if(event.type == SDL_QUIT) {
 				quit = true;
 			}
