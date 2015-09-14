@@ -1,6 +1,7 @@
 #include "pixelwidget.h"
 #include <algorithm>
 #include <iostream>
+#include <fstream>
 #include <getopt.h>
 
 struct Options {
@@ -77,6 +78,16 @@ bool Options::parse(int argc, char ** argv)
 	std::transform(lower_filename.begin(), lower_filename.end(), lower_filename.begin(), ::tolower);
 	if(lower_filename.substr(lower_filename.size() - 4) != ".xpm") {
 		return printUsage();
+	}
+	std::ifstream file(filename.c_str());
+	if(file && hasSize) {
+		std::cout << "File with name '" << filename << "' already exists." << std::endl;
+		std::cout << "Are you sure want to rewrite it? ";
+		char response;
+		std::cin >> response;
+		if(tolower(response) != 'y') {
+			return false;
+		}
 	}
 	return true;
 }
