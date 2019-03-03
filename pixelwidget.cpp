@@ -538,14 +538,14 @@ void PixelWidget::update()
 	SDL_Rect oldCursorRect = make_rect(leftTop + oldCursor * zoomFactor, zoomFactor, zoomFactor);
 	SDL_Rect colorUnderCursorRect;
 	colorUnderCursorRect.x = 24;
-	colorUnderCursorRect.y = 24;
+	colorUnderCursorRect.y = 8;
 	colorUnderCursorRect.w = 8;
 	colorUnderCursorRect.h = 8;
 	SDL_Rect currentColorRect;
 	currentColorRect.x = 0;
 	currentColorRect.y = 0;
 	currentColorRect.w = 32;
-	currentColorRect.h = 32;
+	currentColorRect.h = 16;
 
 	if(wholeScreenChanged) {
 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
@@ -644,26 +644,26 @@ void PixelWidget::update()
 	palette_rect.x = 0;
 	palette_rect.y = 0;
 	palette_rect.w = 32;
-	palette_rect.h = 32;
+	palette_rect.h = 16;
 	for(unsigned i = 0; i < canvas.palette.size(); ++i) {
-		palette_rect.y = i * 32;
+		palette_rect.y = i * 16;
 		Chthon::Color color = canvas.palette[i];
 		SDL_SetRenderDrawColor(renderer, Chthon::get_red(color), Chthon::get_green(color), Chthon::get_blue(color), 255);
 		SDL_RenderFillRect(renderer, &palette_rect);
 	}
 	SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 	palette_rect.y = 0;
-	palette_rect.h = 32 * canvas.palette.size();
+	palette_rect.h = 16 * canvas.palette.size();
 	SDL_RenderDrawRect(renderer, &palette_rect);
 
-	currentColorRect.y += color * 32;
+	currentColorRect.y += color * 16;
 	Chthon::Color color_value = canvas.palette[color];
 	SDL_SetRenderDrawColor(renderer, Chthon::get_red(color), Chthon::get_green(color), Chthon::get_blue(color), 255);
 	SDL_RenderFillRect(renderer, &currentColorRect);
 	SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 	SDL_RenderDrawRect(renderer, &currentColorRect);
 
-	colorUnderCursorRect.y += color * 32;
+	colorUnderCursorRect.y += color * 16;
 	color_value = canvas.palette[indexAtPos(cursor)];
 	SDL_SetRenderDrawColor(renderer, Chthon::get_red(color), Chthon::get_green(color), Chthon::get_blue(color), 255);
 	SDL_RenderFillRect(renderer, &colorUnderCursorRect);
@@ -675,7 +675,7 @@ void PixelWidget::update()
 	text_rect.x = 33;
 	text_rect.y = 0;
 	text_rect.w = rect.w - 33;
-	text_rect.h = 32;
+	text_rect.h = 16;
 	SDL_RenderFillRect(renderer, &text_rect);
 
 	std::string line;
