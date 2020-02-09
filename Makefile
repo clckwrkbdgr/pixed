@@ -1,3 +1,4 @@
+VERSION=$(shell git tag | sed 's/.*\([0-9]\+\.[0-9]\+\.[0-9]\+\)/\1/' | sort -nt . | tail -1)
 BIN = pixed
 LIBS = -lSDL2 -lchthon2
 
@@ -14,6 +15,16 @@ run: all
 
 $(BIN): $(OBJ) $(APP_OBJ)
 	$(CXX) $(LIBS) -o $@ $^
+
+deb: $(BIN)
+	@debpackage.py \
+		$(BIN) \
+		-v $(VERSION) \
+		--maintainer 'umi041 <umi0451@gmail.com>' \
+		--bin $(BIN) \
+		--build-dir tmp \
+		--dest-dir . \
+		--description 'Pixel editor with vi-like controls.'
 
 tmp/%.o: %.cpp
 	@echo Compiling $<...

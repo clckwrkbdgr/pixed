@@ -6,3 +6,4 @@ pixed
 *.o
 tmp/
 /*.xpm
+*.deb
